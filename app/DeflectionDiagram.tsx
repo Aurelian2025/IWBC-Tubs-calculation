@@ -26,6 +26,22 @@ type DeflectionPoint = {
 
 const INCH_TO_MM = 25.4;
 
+// Normalized plate points (same pattern for all surfaces)
+const PLATE_SAMPLE_POINTS: { u: number; v: number }[] = [
+  { u: 0.05, v: 0.80 },
+  { u: 1 / 3, v: 0.80 },
+  { u: 2 / 3, v: 0.80 },
+  { u: 0.95, v: 0.80 },
+
+  { u: 0.15, v: 0.50 },
+  { u: 0.85, v: 0.50 },
+
+  { u: 0.05, v: 0.20 },
+  { u: 1 / 3, v: 0.20 },
+  { u: 2 / 3, v: 0.20 },
+  { u: 0.95, v: 0.20 }
+];
+
 export default function DeflectionDiagram({
   tub,
   frame,
@@ -43,24 +59,20 @@ export default function DeflectionDiagram({
   shortProfile: DeflectionPoint[];
   longProfile: DeflectionPoint[];
 }) {
-  // Bigger canvas
   const svgWidth = 1000;
   const svgHeight = 550;
   const margin = 40;
 
-  // Reserve space on right for short-side view + legend
-  const rightPanelWidth = 260;
-
-  // Base scales for main 3D-ish view (left)
-  const pxPerInLength = 7; // along L
-  const pxPerInHeight = 5; // vertical
-  const pxPerInDepth = 3;  // depth (tub width)
+  // Base scales for 3D-ish view
+  const pxPerInLength = 7;
+  const pxPerInHeight = 5;
+  const pxPerInDepth = 3;
 
   let Lpx = tub.L_tub_in * pxPerInLength;
   let Hpx = tub.H_tub_in * pxPerInHeight;
   let Dpx = tub.W_tub_in * pxPerInDepth;
 
-  const maxL = svgWidth - 2 * margin - rightPanelWidth;
+  const maxL = svgWidth - 2 * margin;
   const maxH = svgHeight - 2 * margin - 40;
   const scale = Math.min(
     1,
@@ -84,7 +96,7 @@ export default function DeflectionDiagram({
   const FBL = { x: baseX, y: baseY + Hpx };
   const FBR = { x: baseX + Lpx, y: baseY + Hpx };
 
-  // Back outer
+  // Back outer corners
   const BTL = { x: FTL.x + depthX, y: FTL.y + depthY };
   const BTR = { x: FTR.x + depthX, y: FTR.y + depthY };
   const BBL = { x: FBL.x + depthX, y: FBL.y + depthY };
@@ -102,19 +114,16 @@ export default function DeflectionDiagram({
   const iBBL = { x: BBL.x + wallOffset, y: BBL.y - wallOffset };
   const iBBR = { x: BBR.x - wallOffset, y: BBR.y - wallOffset };
 
-  // water_freeboard_in is actually water depth from bottom
-const hWaterIn = Math.min(tub.water_freeboard_in, tub.H_tub_in);
-const waterFrac = Math.max(0, Math.min(1, hWaterIn / tub.H_tub_in));
-// distance from top to water surface
-const freeboardPx = Hpx * (1 - waterFrac);
+  // Water depth interpreted as water_freeboard_in
+  const hWaterIn = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+  const waterFrac = Math.max(0, Math.min(1, hWaterIn / tub.H_tub_in));
+  const freeboardPx = Hpx * (1 - waterFrac);
 
-const wIFTL = { x: iFTL.x, y: iFTL.y + freeboardPx };
-const wIFTR = { x: iFTR.x, y: iFTR.y + freeboardPx };
-const wIBTL = { x: iBTL.x, y: iBTL.y + freeboardPx };
-const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
+  const wIFTL = { x: iFTL.x, y: iFTL.y + freeboardPx };
+  const wIFTR = { x: iFTR.x, y: iFTR.y + freeboardPx };
+  const wIBTL = { x: iBTL.x, y: iBTL.y + freeboardPx };
+  const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
 
-
-  // Vessel/frame colors from max δ
   const eps = 1e-9;
   const maxDefSingle = Math.max(bottom.delta_max, extr.delta_max, eps);
 
@@ -151,18 +160,29 @@ const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
     y: (iFBL.y + iFBR.y + iBBL.y + iBBR.y) / 4
   };
 
-  // Helpers
-  function lerpPoint(
-    p1: { x: number; y: number },
-    p2: { x: number; y: number },
-    t: number
-  ): { x: number; y: number } {
-    return {
-      x: p1.x + (p2.x - p1.x) * t,
-      y: p1.y + (p2.y - p1.y) * t
-    };
+  // Helper: bilinear interpolation on a quad
+  function bilerp(
+    u: number,
+    v: number,
+    BL: { x: number; y: number },
+    BR: { x: number; y: number },
+    TR: { x: number; y: number },
+    TL: { x: number; y: number }
+  ) {
+    const x =
+      BL.x * (1 - u) * (1 - v) +
+      BR.x * u * (1 - v) +
+      TR.x * u * v +
+      TL.x * (1 - u) * v;
+    const y =
+      BL.y * (1 - u) * (1 - v) +
+      BR.y * u * (1 - v) +
+      TR.y * u * v +
+      TL.y * (1 - u) * v;
+    return { x, y };
   }
 
+  // Combine all deflections for radius scaling
   const allDeflections = [
     ...bottomProfile.map((p) => p.deflection_in),
     ...shortProfile.map((p) => p.deflection_in),
@@ -173,29 +193,31 @@ const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
     eps
   );
 
-  // Map profiles to main 3D view
-  const bottomPointsSvg = bottomProfile.map((p) => {
-    const t = tub.L_tub_in > 0 ? p.x_in / tub.L_tub_in : 0;
-    const pos = lerpPoint(iFBL, iFBR, t);
-    return { ...p, svg: pos };
-  });
-
-  const longPointsSvg = longProfile.map((p) => {
-    const t = tub.L_tub_in > 0 ? p.x_in / tub.L_tub_in : 0;
-    const pos = lerpPoint(iFBR, iBBR, t);
-    return { ...p, svg: pos };
-  });
-
-  const shortPointsSvg = shortProfile.map((p) => {
-    const t = tub.W_tub_in > 0 ? p.x_in / tub.W_tub_in : 0;
-    const base = lerpPoint(iFBL, iFBR, t);
-    return { ...p, svg: { x: base.x, y: base.y - 10 } };
-  });
-
   function radiusFromDeflection(defIn: number): number {
     const frac = Math.max(0, Math.min(1, Math.abs(defIn) / maxDefProfile));
-    return 4 + 6 * frac;
+    return 4 + 6 * frac; // between 4 and 10 px
   }
+
+  // Map bottom points to interior bottom surface (quad: iFBL, iFBR, iBBR, iBBL)
+  const bottomPointsSvg = bottomProfile.map((p, idx) => {
+    const uv = PLATE_SAMPLE_POINTS[idx] ?? PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
+    const svg = bilerp(uv.u, uv.v, iFBL, iFBR, iBBR, iBBL);
+    return { def: p.deflection_in, idx: idx + 1, svg };
+  });
+
+  // Map short-side points to front interior wall (quad: iFBL, iFBR, iFTR, iFTL)
+  const shortPointsSvg = shortProfile.map((p, idx) => {
+    const uv = PLATE_SAMPLE_POINTS[idx] ?? PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
+    const svg = bilerp(uv.u, uv.v, iFBL, iFBR, iFTR, iFTL);
+    return { def: p.deflection_in, idx: idx + 1, svg };
+  });
+
+  // Map long-side points to right interior wall (quad: iFBR, iBBR, iBTR, iFTR)
+  const longPointsSvg = longProfile.map((p, idx) => {
+    const uv = PLATE_SAMPLE_POINTS[idx] ?? PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
+    const svg = bilerp(uv.u, uv.v, iFBR, iBBR, iBTR, iFTR);
+    return { def: p.deflection_in, idx: idx + 1, svg };
+  });
 
   // Legend with actual values (mm)
   const legendLines: string[] = [];
@@ -221,49 +243,12 @@ const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
   });
 
   const legendX = svgWidth - margin - 10;
-  const legendY = margin + 130;
+  const legendY = margin + 20;
   const lineHeight = 12;
-
-    // Place short-side panel centered below the main tub
-  const sidePanelW = rightPanelWidth - 30;
-  const sidePanelH = 180;
-  const sidePanelX = baseX + Lpx / 2 - sidePanelW / 2; // centered under tub
-  const sidePanelY = baseY + Hpx + 60;                 // below tub
-
-  const sideMaxW = sidePanelW - 40;
-  const sideMaxH = sidePanelH - 40;
-
-  const sideScaleW = tub.W_tub_in > 0 ? sideMaxW / tub.W_tub_in : 1;
-  const sideScaleH = tub.H_tub_in > 0 ? sideMaxH / tub.H_tub_in : 1;
-  const sideScale = Math.min(sideScaleW, sideScaleH);
-
-  const sideWpx = tub.W_tub_in * sideScale;
-  const sideHpx = tub.H_tub_in * sideScale;
-
-  const sideOriginX = sidePanelX + 20;
-  const sideOriginY = sidePanelY + 10;
-
-  // Side-view rectangle (looking at right wall): width horizontal, height vertical
-  const sideTopLeft = { x: sideOriginX, y: sideOriginY };
-  const sideBottomLeft = { x: sideOriginX, y: sideOriginY + sideHpx };
-  const sideTopRight = { x: sideOriginX + sideWpx, y: sideOriginY };
-  const sideBottomRight = { x: sideOriginX + sideWpx, y: sideOriginY + sideHpx };
-
-  // Water level in side view
-  const sideWaterDepthPx = hWaterIn * sideScale;
-  const sideWaterTopY = sideOriginY + (tub.H_tub_in * sideScale - sideWaterDepthPx);
-
-  // Short-side points mapped into side view
-  const shortSidePointsView = shortProfile.map((p, i) => {
-    const t = tub.W_tub_in > 0 ? p.x_in / tub.W_tub_in : 0;
-    const x = sideOriginX + t * sideWpx;
-    const y = sideBottomLeft.y; // along bottom edge
-    return { ...p, idx: i + 1, svg: { x, y } };
-  });
 
   return (
     <svg width={svgWidth} height={svgHeight}>
-      {/* Main 3D-ish tub on left */}
+      {/* Main 3D-ish tub */}
       <polygon
         points={poly(topFace)}
         fill="none"
@@ -297,7 +282,7 @@ const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
         strokeWidth={1}
       />
 
-      {/* Water in main view */}
+      {/* Water */}
       <polygon
         points={poly([wIBTL, wIBTR, wIFTR, wIFTL])}
         fill="rgba(120,170,255,0.85)"
@@ -315,6 +300,7 @@ const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
         stroke="none"
       />
 
+      {/* Frame band */}
       <polygon
         points={poly(frameBand)}
         fill={frameColor}
@@ -325,13 +311,13 @@ const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
       {/* Max vessel δ marker */}
       <circle cx={bottomCenter.x} cy={bottomCenter.y} r={4} fill="blue" />
 
-      {/* Bottom points (red) */}
-      {bottomPointsSvg.map((p, idx) => {
-        const mm = p.deflection_in * INCH_TO_MM;
-        const r = radiusFromDeflection(p.deflection_in);
-        const label = `B${idx + 1}`;
+      {/* Bottom points (red) on interior bottom */}
+      {bottomPointsSvg.map((p) => {
+        const mm = p.def * INCH_TO_MM;
+        const r = radiusFromDeflection(p.def);
+        const label = `B${p.idx}`;
         return (
-          <g key={`b-${idx}`}>
+          <g key={`b-${p.idx}`}>
             <circle
               cx={p.svg.x}
               cy={p.svg.y}
@@ -340,11 +326,7 @@ const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
               stroke="#660000"
               strokeWidth={1}
             >
-              <title>
-                {`Bottom ${label}: x=${p.x_in.toFixed(1)} in, δ=${mm.toFixed(
-                  3
-                )} mm`}
-              </title>
+              <title>{`${label}: δ=${mm.toFixed(3)} mm`}</title>
             </circle>
             <text
               x={p.svg.x + r + 2}
@@ -358,86 +340,13 @@ const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
         );
       })}
 
-      
-      
-      {/* RIGHT SIDE: Short-side 2D view */}
-           {/* Panel frame */}
-      <rect
-        x={sidePanelX}
-        y={sidePanelY}
-        width={sidePanelW}
-        height={sidePanelH}
-        fill="none"
-        stroke="#999"
-        strokeWidth={1}
-      />
-      <text
-        x={sidePanelX + sidePanelW / 2}
-        y={sidePanelY - 6}
-        fontSize={11}
-        textAnchor="middle"
-        fill="#333"
-      >
-        Short-side view (right wall, 3D)
-      </text>
-
-      {/* 3D-ish short-side wall: front face + top depth */}
-      {/* front face */}
-      <rect
-        x={sideTopLeft.x}
-        y={sideTopLeft.y}
-        width={sideWpx}
-        height={sideHpx}
-        fill="rgba(255, 220, 220, 0.7)"
-        stroke="#333"
-        strokeWidth={1}
-      />
-
-      {/* top face (simple depth) */}
-      {(() => {
-        const depth = 12; // px depth for 3D effect
-        const tTL = { x: sideTopLeft.x, y: sideTopLeft.y };
-        const tTR = { x: sideTopRight.x, y: sideTopRight.y };
-        const tBL = { x: sideTopLeft.x + depth, y: sideTopLeft.y - depth };
-        const tBR = { x: sideTopRight.x + depth, y: sideTopRight.y - depth };
-        return (
-          <>
-            <polygon
-              points={`${tTL.x},${tTL.y} ${tTR.x},${tTR.y} ${tBR.x},${tBR.y} ${tBL.x},${tBL.y}`}
-              fill="rgba(255, 235, 235, 0.9)"
-              stroke="#666"
-              strokeWidth={1}
-            />
-            {/* back edge */}
-            <line
-              x1={tBL.x}
-              y1={tBL.y}
-              x2={tBR.x}
-              y2={tBR.y}
-              stroke="#666"
-              strokeWidth={1}
-            />
-          </>
-        );
-      })()}
-
-      {/* Water level line in side view */}
-      <line
-        x1={sideTopLeft.x}
-        y1={sideWaterTopY}
-        x2={sideTopRight.x}
-        y2={sideWaterTopY}
-        stroke="#1b4e8a"
-        strokeWidth={1.5}
-      />
-
-      {/* Short-side points clearly on side view (green) */}
-      {shortSidePointsView.map((p) => {
-        const mm = p.deflection_in * INCH_TO_MM;
-        const r = radiusFromDeflection(p.deflection_in);
+      {/* Short-side points (green) on front interior wall */}
+      {shortPointsSvg.map((p) => {
+        const mm = p.def * INCH_TO_MM;
+        const r = radiusFromDeflection(p.def);
         const label = `S${p.idx}`;
         return (
-          <g key={`s-side-${p.idx}`}>
+          <g key={`s-${p.idx}`}>
             <circle
               cx={p.svg.x}
               cy={p.svg.y}
@@ -446,17 +355,12 @@ const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
               stroke="#004400"
               strokeWidth={1}
             >
-              <title>
-                {`Short ${label}: x=${p.x_in.toFixed(1)} in, δ=${mm.toFixed(
-                  3
-                )} mm`}
-              </title>
+              <title>{`${label}: δ=${mm.toFixed(3)} mm`}</title>
             </circle>
             <text
-              x={p.svg.x}
-              y={p.svg.y - r - 2}
+              x={p.svg.x + r + 2}
+              y={p.svg.y + 3}
               fontSize={9}
-              textAnchor="middle"
               fill="#004400"
             >
               {label}
@@ -465,7 +369,36 @@ const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
         );
       })}
 
-      {/* Legend of values on the right below the short-side view */}
+      {/* Long-side points (blue) on right interior wall */}
+      {longPointsSvg.map((p) => {
+        const mm = p.def * INCH_TO_MM;
+        const r = radiusFromDeflection(p.def);
+        const label = `L${p.idx}`;
+        return (
+          <g key={`l-${p.idx}`}>
+            <circle
+              cx={p.svg.x}
+              cy={p.svg.y}
+              r={r}
+              fill="rgba(0,0,220,0.85)"
+              stroke="#000066"
+              strokeWidth={1}
+            >
+              <title>{`${label}: δ=${mm.toFixed(3)} mm`}</title>
+            </circle>
+            <text
+              x={p.svg.x + r + 2}
+              y={p.svg.y + 3}
+              fontSize={9}
+              fill="#000066"
+            >
+              {label}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Legend of numeric deflections */}
       {legendLines.map((text, idx) => (
         <text
           key={idx}
