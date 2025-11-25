@@ -113,4 +113,100 @@ export default function DeflectionDiagram({
   // Frame band approximated as a strip just below the tub bottom (front edge)
   const frameBandHeight = 10;
   const FBL = { x: BFL.x, y: BFL.y + frameBandHeight };
-  const FBR = { x: BFR.x, y: BFR.
+  const FBR = { x: BFR.x, y: BFR.y + frameBandHeight };
+  const frameBandFront = [BFL, BFR, FBR, FBL];
+
+  // Position for labels
+  const labelVesselX = baseX + widthDx + 60;
+  const labelVesselY = baseY + 40;
+  const labelFrameX = baseX + widthDx + 60;
+  const labelFrameY = baseY + 80;
+
+  return (
+    <svg width={width} height={height}>
+      {/* Top face outline for context (light) */}
+      <polygon
+        points={poly(topFace)}
+        fill="none"
+        stroke="#888"
+        strokeWidth={1}
+      />
+
+      {/* Side face (vessel) */}
+      <polygon
+        points={poly(sideFace)}
+        fill={vesselColor}
+        stroke="#333"
+        strokeWidth={1.5}
+      />
+
+      {/* Front face (vessel) */}
+      <polygon
+        points={poly(frontFace)}
+        fill={vesselColor}
+        stroke="#333"
+        strokeWidth={1.5}
+      />
+
+      {/* Frame band at bottom front (frame deflection) */}
+      <polygon
+        points={poly(frameBandFront)}
+        fill={frameColor}
+        stroke="#333"
+        strokeWidth={1}
+      />
+
+      {/* Max bottom deflection marker (center-ish of box bottom) */}
+      <circle
+        cx={(BFL.x + BFR.x + BBL.x + BBR.x) / 4}
+        cy={(BFL.y + BFR.y + BBL.y + BBR.y) / 4}
+        r={6}
+        fill="blue"
+      />
+      <text
+        x={(BFL.x + BFR.x + BBL.x + BBR.x) / 4 + 8}
+        y={(BFL.y + BFR.y + BBL.y + BBR.y) / 4 + 4}
+        fontSize={11}
+        fill="blue"
+      >
+        vessel max δ
+      </text>
+
+      {/* Simple legend */}
+      <rect
+        x={labelVesselX}
+        y={labelVesselY - 10}
+        width={18}
+        height={12}
+        fill={vesselColor}
+        stroke="#333"
+        strokeWidth={0.5}
+      />
+      <text x={labelVesselX + 24} y={labelVesselY} fontSize={11} fill="#222">
+        Vessel deflection: {bottom.delta_max.toFixed(5)} in
+      </text>
+
+      <rect
+        x={labelFrameX}
+        y={labelFrameY - 10}
+        width={18}
+        height={12}
+        fill={frameColor}
+        stroke="#333"
+        strokeWidth={0.5}
+      />
+      <text x={labelFrameX + 24} y={labelFrameY} fontSize={11} fill="#222">
+        Frame deflection: {extr.delta_max.toFixed(5)} in
+      </text>
+
+      <text
+        x={margin}
+        y={height - margin}
+        fontSize={11}
+        fill="#555"
+      >
+        Color intensity shows relative deflection: redder = larger. Front & side faces = vessel, bottom band = frame.
+      </text>
+    </svg>
+  );
+}
