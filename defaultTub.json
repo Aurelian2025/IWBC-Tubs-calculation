@@ -1,0 +1,22 @@
+{
+  "tub": {
+    "L_tub_in": 59,
+    "W_tub_in": 24,
+    "H_tub_in": 24,
+
+    "t_mdf_bottom_in": 0.5,
+    "t_mdf_side_in": 0.5,
+
+    "water_freeboard_in": 8,
+
+    "n_transverse": 4
+  },
+
+  "frame": {
+    "L_frame_in": 89.5,
+    "W_frame_in": 33.5,
+    "H_frame_in": 26.5,
+
+    "extr_size_mm": 25.0
+  }
+}
