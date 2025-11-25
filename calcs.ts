@@ -89,7 +89,10 @@ export function mdfBottomDeflection(
   materials: MaterialsConfig
 ) {
   const span = tub.L_tub_in / (tub.n_transverse - 1); // spacing between beams
-  const w_strip = uniformLoadBottomStrip(tub, materials);
+
+  // Load for the full bottom width
+  const w_per_in_strip = uniformLoadBottomStrip(tub, materials); // lb/in for 1" strip
+  const w_total = w_per_in_strip * tub.W_tub_in;                 // lb/in along span
 
   const b = tub.W_tub_in;             // width of plate (in)
   const t = tub.t_mdf_bottom_in;      // thickness (in)
@@ -99,7 +102,7 @@ export function mdfBottomDeflection(
 
   const { M_max, delta_max } = beamDeflectionUniform(
     span,
-    w_strip,
+    w_total,
     materials.mdf_extira.E_psi,
     I
   );
@@ -108,12 +111,13 @@ export function mdfBottomDeflection(
 
   return {
     span,
-    w_strip,
+    w_strip: w_total, // rename in UI later if you want
     M_max,
     delta_max,
     sigma_max
   };
 }
+
 
 // -------------------------
 // Extrusion Deflection
@@ -165,6 +169,7 @@ export function extrusionDeflection(
 
 // -------------------------
 // Bottom deflection profile (10 points)
+// Using the same beam model as mdfBottomDeflection
 // -------------------------
 
 export function bottomDeflectionProfile(
@@ -172,17 +177,16 @@ export function bottomDeflectionProfile(
   materials: MaterialsConfig,
   nPoints: number = 10
 ): { x_in: number; deflection_in: number }[] {
-  const L = tub.L_tub_in; // span along tub length (front to back)
+  // span between extrusions
+  const L = tub.L_tub_in / (tub.n_transverse - 1);
 
-  // approximate uniform load from water: average pressure * width
-  const h_water = tub.H_tub_in - tub.water_freeboard_in;
-  const gamma = materials.water.gamma_psi_per_in;
-  const p_avg = gamma * (h_water / 2); // psi (average hydrostatic)
-  const w = p_avg * tub.W_tub_in;      // lb/in along length
+  // same load as mdfBottomDeflection: full-width water load
+  const w_per_in_strip = uniformLoadBottomStrip(tub, materials); // lb/in for 1" strip
+  const w = w_per_in_strip * tub.W_tub_in;                       // lb/in along span
 
-  const b = tub.W_tub_in;              // width of bottom plate (in)
-  const t = tub.t_mdf_bottom_in;       // thickness (in)
-  const I = (b * Math.pow(t, 3)) / 12; // in^4
+  const b = tub.W_tub_in;
+  const t = tub.t_mdf_bottom_in;
+  const I = (b * Math.pow(t, 3)) / 12;
   const E = materials.mdf_extira.E_psi;
 
   const result: { x_in: number; deflection_in: number }[] = [];
@@ -206,6 +210,7 @@ export function bottomDeflectionProfile(
 
   return result;
 }
+
 // -------------------------
 // Short-side wall deflection profile (5 points)
 // Treat each short side as a beam along tub width
