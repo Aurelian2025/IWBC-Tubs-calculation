@@ -97,42 +97,51 @@ const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in); // inches
 }
 
 // -------------------------
-// MDF Bottom Deflection
+// MDF Bottom Deflection (plate model, 4 edges simply supported)
 // -------------------------
 
 export function mdfBottomDeflection(
   tub: TubGeometry,
   materials: MaterialsConfig
 ) {
-  const span = tub.L_tub_in / (tub.n_transverse - 1); // spacing between beams
+  // We interpret water_freeboard_in as **water depth from the bottom**
+  const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in); // in
+  const gamma = materials.water.gamma_psi_per_in;                 // psi per inch of depth
 
-  // Load for the full bottom width
-  const w_per_in_strip = uniformLoadBottomStrip(tub, materials); // lb/in for 1" strip
-  const w_total = w_per_in_strip * tub.W_tub_in;                 // lb/in along span
+  // Uniform pressure on the bottom (psi = lb/in^2)
+  const q_bottom = gamma * h_water;
 
-  const b = tub.W_tub_in;             // width of plate (in)
-  const t = tub.t_mdf_bottom_in;      // thickness (in)
+  // Plate dimensions: bottom of the tub
+  const a = Math.min(tub.L_tub_in, tub.W_tub_in); // shorter side (in)
+  const b = Math.max(tub.L_tub_in, tub.W_tub_in); // longer side (in)
 
-  const I = (b * Math.pow(t, 3)) / 12; // moment of inertia (in^4)
+  const t = tub.t_mdf_bottom_in;         // thickness (in)
+  const E = materials.mdf_extira.E_psi;  // psi
+  const D = plateFlexuralRigidity(E, t); // lb·in
+
+  // Max deflection of a simply supported rectangular plate under uniform load:
+  // w_max ≈ q * a^4 / (64 * D)
+  const delta_max = (q_bottom * Math.pow(a, 4)) / (64 * D);
+
+  // For stress, approximate plate as a beam spanning along the short side a
+  // line load w_line = q_bottom * b (lb/in)
+  const w_line = q_bottom * b;            // lb/in along span a
+  const I_beam = (b * Math.pow(t, 3)) / 12; // in^4
   const c = t / 2;
 
-  const { M_max, delta_max } = beamDeflectionUniform(
-    span,
-    w_total,
-    materials.mdf_extira.E_psi,
-    I
-  );
-
-  const sigma_max = (M_max * c) / I;
+  // Simply supported beam, uniform load: M_max = wL^2 / 8
+  const M_max = (w_line * Math.pow(a, 2)) / 8;
+  const sigma_max = (M_max * c) / I_beam;
 
   return {
-    span,
-    w_strip: w_total, // rename in UI later if you want
+    span: a,         // effective span (shorter side)
+    w_strip: w_line, // line load along that span
     M_max,
     delta_max,
     sigma_max
   };
 }
+
 
 
 // -------------------------
