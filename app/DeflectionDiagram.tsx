@@ -34,142 +34,131 @@ export default function DeflectionDiagram({
 }) {
   const svgWidth = 720;
   const svgHeight = 420;
-  const margin = 30;
+  const margin = 40;
 
-  // "3D" scaling – we map tub dimensions to a pseudo-isometric view.
-  const kLength = 3.2; // px per inch along tub length
-  const kWidth = 2.0;  // px per inch along tub width (depth direction)
-  const kHeight = 3.0; // px per inch vertically
+  // Base scales
+  const pxPerInLength = 6; // along L
+  const pxPerInHeight = 5; // vertical
+  const pxPerInDepth = 2.5; // "depth" into page
 
-  // Base unscaled sizes
-  let Lpx = tub.L_tub_in * kLength;
-  let Wpx = tub.W_tub_in * kWidth;
-  let Hpx = tub.H_tub_in * kHeight;
+  // Raw pixel sizes
+  let Lpx = tub.L_tub_in * pxPerInLength;
+  let Hpx = tub.H_tub_in * pxPerInHeight;
+  let Dpx = tub.W_tub_in * pxPerInDepth;
 
-  // Fit into viewport
+  // Clamp into view
   const maxL = svgWidth - 2 * margin - 150;
   const maxH = svgHeight - 2 * margin - 40;
   const scale = Math.min(
     1,
     maxL / Lpx,
-    maxH / (Hpx + Wpx * 0.5) // rough box height including "depth"
+    maxH / (Hpx + Dpx * 0.7) // 0.7 factor for depth projection
   );
 
   Lpx *= scale;
-  Wpx *= scale;
   Hpx *= scale;
+  Dpx *= scale;
 
-  // Base origin for the front-left top corner of tub
-  const baseX = margin + 80;
-  const baseY = margin + 60;
+  // Depth offset (top face shifted back-right)
+  const depthX = Dpx;
+  const depthY = -Dpx * 0.6;
 
-  // Isometric-ish axes:
-  // - length (L) goes right
-  // - width (W) goes up+right (depth)
-  // - height (H) goes down
-  const Ldx = Lpx;
-  const Ldy = 0;
+  // Base origin = top-left front corner of tub
+  const baseX = margin + 60;
+  const baseY = margin + 80;
 
-  const Wdx = Wpx;
-  const Wdy = -Wpx * 0.5;
+  // Front face corners (outer shell)
+  const FTL = { x: baseX, y: baseY }; // front-top-left
+  const FTR = { x: baseX + Lpx, y: baseY };
+  const FBL = { x: baseX, y: baseY + Hpx };
+  const FBR = { x: baseX + Lpx, y: baseY + Hpx };
 
-  const Hdx = 0;
-  const Hdy = Hpx;
+  // Back face (top) corners
+  const BTL = { x: FTL.x + depthX, y: FTL.y + depthY };
+  const BTR = { x: FTR.x + depthX, y: FTR.y + depthY };
+  const BBL = { x: FBL.x + depthX, y: FBL.y + depthY };
+  const BBR = { x: FBR.x + depthX, y: FBR.y + depthY };
 
-  // Top outer corners of tub (shell)
-  const TFL = { x: baseX, y: baseY }; // Top Front Left
-  const TFR = { x: baseX + Ldx, y: baseY + Ldy }; // Top Front Right
-  const TBL = { x: baseX + Wdx, y: baseY + Wdy }; // Top Back Left
-  const TBR = { x: baseX + Wdx + Ldx, y: baseY + Wdy + Ldy }; // Top Back Right
-
-  // Bottom outer corners
-  const BFL = { x: TFL.x + Hdx, y: TFL.y + Hdy };
-  const BFR = { x: TFR.x + Hdx, y: TFR.y + Hdy };
-  const BBL = { x: TBL.x + Hdx, y: TBL.y + Hdy };
-  const BBR = { x: TBR.x + Hdx, y: TBR.y + Hdy };
-
-  // Inner offset to show wall thickness visually (purely cosmetic)
+  // Inner offset for wall thickness (visual only)
   const wallOffset = 4;
-  const iTFL = { x: TFL.x + wallOffset, y: TFL.y + wallOffset };
-  const iTFR = { x: TFR.x - wallOffset, y: TFR.y + wallOffset };
-  const iTBL = { x: TBL.x + wallOffset, y: TBL.y + wallOffset };
-  const iTBR = { x: TBR.x - wallOffset, y: TBR.y + wallOffset };
+  const iFTL = { x: FTL.x + wallOffset, y: FTL.y + wallOffset };
+  const iFTR = { x: FTR.x - wallOffset, y: FTR.y + wallOffset };
+  const iFBL = { x: FBL.x + wallOffset, y: FBL.y - wallOffset };
+  const iFBR = { x: FBR.x - wallOffset, y: FBR.y - wallOffset };
 
-  const iBFL = { x: BFL.x + wallOffset, y: BFL.y - wallOffset };
-  const iBFR = { x: BFR.x - wallOffset, y: BFR.y - wallOffset };
+  const iBTL = { x: BTL.x + wallOffset, y: BTL.y + wallOffset };
+  const iBTR = { x: BTR.x - wallOffset, y: BTR.y + wallOffset };
   const iBBL = { x: BBL.x + wallOffset, y: BBL.y - wallOffset };
   const iBBR = { x: BBR.x - wallOffset, y: BBR.y - wallOffset };
 
-  // Water volume inside: we approximate as a horizontal plane at the right height
-  const h_water_in = tub.H_tub_in - tub.water_freeboard_in;
-  const waterFrac = Math.max(0, Math.min(1, h_water_in / tub.H_tub_in));
-  const waterDrop = Hpx * waterFrac;
+  // Water level based on depth inside tub
+  const hWaterIn = tub.H_tub_in - tub.water_freeboard_in;
+  const waterFrac = Math.max(0, Math.min(1, hWaterIn / tub.H_tub_in));
+  const waterDropPx = Hpx * waterFrac;
 
-  const wTFL = { x: iTFL.x, y: iTFL.y + waterDrop };
-  const wTFR = { x: iTFR.x, y: iTFR.y + waterDrop };
-  const wTBL = { x: iTBL.x, y: iTBL.y + waterDrop };
-  const wTBR = { x: iTBR.x, y: iTBR.y + waterDrop };
+  // Water plane along front inner face
+  const wIFTL = { x: iFTL.x, y: iFTL.y + waterDropPx };
+  const wIFTR = { x: iFTR.x, y: iFTR.y + waterDropPx };
+  // And corresponding back inner points
+  const wIBTL = { x: iBTL.x, y: iBTL.y + waterDropPx };
+  const wIBTR = { x: iBTR.x, y: iBTR.y + waterDropPx };
 
-  // Skimmer on the inner right wall near water surface (front-right)
-  const skimmerWidthIn = 8;
-  const skimmerHeightIn = 6;
-  const skWpx = skimmerWidthIn * kLength * scale;
-  const skHpx = skimmerHeightIn * kHeight * scale;
-
-  // We'll place skimmer on inner front-right wall at water plane
-  const skX = wTFR.x - skWpx - 2;
-  const skY = wTFR.y - skHpx / 2;
-
-  // Deflection intensities (still calculated in inches, but display in mm)
+  // Deflection intensities
   const eps = 1e-9;
   const maxDef = Math.max(bottom.delta_max, extr.delta_max, eps);
-
   const vesselIntensity = bottom.delta_max / maxDef;
   const frameIntensity = extr.delta_max / maxDef;
 
   const colorFromIntensity = (i: number) => {
-    const clamped = Math.max(0, Math.min(1, i));
+    const c = Math.max(0, Math.min(1, i));
     const r = 255;
-    const g = Math.round(220 * (1 - clamped));
-    const b = Math.round(220 * (1 - clamped));
+    const g = Math.round(220 * (1 - c));
+    const b = Math.round(220 * (1 - c));
     return `rgb(${r},${g},${b})`; // light pink → strong red
   };
 
   const vesselColor = colorFromIntensity(vesselIntensity);
   const frameColor = colorFromIntensity(frameIntensity);
 
-  // Convert deflections to mm for display
+  // Deflection in mm for display
   const vesselDefMm = bottom.delta_max * INCH_TO_MM;
   const frameDefMm = extr.delta_max * INCH_TO_MM;
 
-  // Helper to convert array of points to polygon string
   const poly = (pts: { x: number; y: number }[]) =>
     pts.map((p) => `${p.x},${p.y}`).join(" ");
 
-  // Faces: we draw in back-to-front order for nicer overlap
-  const topFace = [TBL, TBR, TFR, TFL];
+  // Faces (back to front draw order)
+  const topFace = [BTL, BTR, FTR, FTL];
+  const rightOuter = [FTR, BTR, BBR, FBR];
+  const frontOuter = [FTL, FTR, FBR, FBL];
 
-  const sideOuter = [TBR, TBL, BBL, BBR]; // right/back side
-  const sideInner = [iTBR, iTBL, iBBL, iBBR];
+  const rightInner = [iFTR, iBTR, iBBR, iFBR];
+  const frontInner = [iFTL, iFTR, iFBR, iFBL];
 
-  const frontOuter = [TFL, TFR, BFR, BFL];
-  const frontInner = [iTFL, iTFR, iBFR, iBFL];
-
-  // Frame band under front edge
+  // Frame band under front bottom
   const frameBandHeight = 10;
-  const FBL = { x: BFL.x, y: BFL.y + frameBandHeight };
-  const FBR = { x: BFR.x, y: BFR.y + frameBandHeight };
-  const frameBandFront = [BFL, BFR, FBR, FBL];
+  const FB1 = { x: FBL.x, y: FBL.y + frameBandHeight };
+  const FB2 = { x: FBR.x, y: FBR.y + frameBandHeight };
+  const frameBand = [FBL, FBR, FB2, FB1];
 
-  // Approximate center of bottom for max deflection marker
-  const midBottom = {
-    x: (BFL.x + BFR.x + BBL.x + BBR.x) / 4,
-    y: (BFL.y + BFR.y + BBL.y + BBR.y) / 4
+  // Approximate bottom center for max vessel deflection marker
+  const bottomCenter = {
+    x: (iFBL.x + iFBR.x + iBBL.x + iBBR.x) / 4,
+    y: (iFBL.y + iFBR.y + iBBL.y + iBBR.y) / 4
   };
+
+  // Skimmer on inside of right wall, near water level (front-right inner)
+  const skWidthIn = 8;
+  const skHeightIn = 6;
+  const skWpx = skWidthIn * pxPerInLength * scale;
+  const skHpx = skHeightIn * pxPerInHeight * scale;
+
+  const skX = wIFTR.x - skWpx - 2;
+  const skY = wIFTR.y - skHpx / 2;
 
   return (
     <svg width={svgWidth} height={svgHeight}>
-      {/* Top face outline for context */}
+      {/* Thin outline for top */}
       <polygon
         points={poly(topFace)}
         fill="none"
@@ -177,9 +166,9 @@ export default function DeflectionDiagram({
         strokeWidth={1}
       />
 
-      {/* Outer side and front walls (lines only) */}
+      {/* Outer right and front walls */}
       <polygon
-        points={poly(sideOuter)}
+        points={poly(rightOuter)}
         fill="none"
         stroke="#555"
         strokeWidth={1.5}
@@ -191,9 +180,9 @@ export default function DeflectionDiagram({
         strokeWidth={1.5}
       />
 
-      {/* Inner vessel (side + front) filled, colored by vessel deflection */}
+      {/* Inner vessel walls (colored by vessel deflection) */}
       <polygon
-        points={poly(sideInner)}
+        points={poly(rightInner)}
         fill={vesselColor}
         stroke="#333"
         strokeWidth={1}
@@ -205,38 +194,37 @@ export default function DeflectionDiagram({
         strokeWidth={1}
       />
 
-      {/* Water volume (top + front/side surfaces) */}
-      {/* Top water surface */}
+      {/* Water: top surface */}
       <polygon
-        points={poly([wTBL, wTBR, wTFR, wTFL])}
-        fill="rgba(120, 170, 255, 0.8)"
+        points={poly([wIBTL, wIBTR, wIFTR, wIFTL])}
+        fill="rgba(120,170,255,0.85)"
         stroke="#1b4e8a"
         strokeWidth={1}
       />
-      {/* Front water face */}
+      {/* Water: front face */}
       <polygon
         points={poly([
-          { x: wTFL.x, y: wTFL.y },
-          { x: wTFR.x, y: wTFR.y },
-          { x: iBFR.x, y: iBFR.y },
-          { x: iBFL.x, y: iBFL.y }
+          wIFTL,
+          wIFTR,
+          iFBR,
+          iFBL
         ])}
-        fill="rgba(120, 170, 255, 0.5)"
+        fill="rgba(120,170,255,0.5)"
         stroke="none"
       />
-      {/* Side water face */}
+      {/* Water: right face */}
       <polygon
         points={poly([
-          { x: wTFR.x, y: wTFR.y },
-          { x: wTBR.x, y: wTBR.y },
-          { x: iBBR.x, y: iBBR.y },
-          { x: iBFR.x, y: iBFR.y }
+          wIFTR,
+          wIBTR,
+          iBBR,
+          iFBR
         ])}
-        fill="rgba(120, 170, 255, 0.4)"
+        fill="rgba(120,170,255,0.4)"
         stroke="none"
       />
 
-      {/* Skimmer on inner front-right wall */}
+      {/* Skimmer on inner right wall */}
       <rect
         x={skX}
         y={skY}
@@ -265,16 +253,16 @@ export default function DeflectionDiagram({
         skimmer
       </text>
 
-      {/* Frame band under front edge, colored by frame deflection */}
+      {/* Frame band under front bottom (frame deflection) */}
       <polygon
-        points={poly(frameBandFront)}
+        points={poly(frameBand)}
         fill={frameColor}
         stroke="#333"
         strokeWidth={1}
       />
       <text
-        x={(FBL.x + FBR.x) / 2}
-        y={FBL.y + frameBandHeight + 12}
+        x={(FB1.x + FB2.x) / 2}
+        y={FB1.y + frameBandHeight + 12}
         fontSize={10}
         textAnchor="middle"
         fill="#444"
@@ -283,17 +271,17 @@ export default function DeflectionDiagram({
       </text>
 
       {/* Max vessel deflection marker (bottom mid) */}
-      <circle cx={midBottom.x} cy={midBottom.y} r={5} fill="blue" />
+      <circle cx={bottomCenter.x} cy={bottomCenter.y} r={5} fill="blue" />
       <text
-        x={midBottom.x + 8}
-        y={midBottom.y + 4}
+        x={bottomCenter.x + 8}
+        y={bottomCenter.y + 4}
         fontSize={10}
         fill="blue"
       >
         max δ (vessel)
       </text>
 
-      {/* Legend with deflection in mm */}
+      {/* Legend with mm values */}
       <rect
         x={svgWidth - margin - 22}
         y={margin}
@@ -304,7 +292,7 @@ export default function DeflectionDiagram({
         strokeWidth={0.5}
       />
       <text
-        x={svgWidth - margin - 28}
+        x={svgWidth - margin - 26}
         y={margin + 10}
         fontSize={10}
         textAnchor="end"
@@ -323,7 +311,7 @@ export default function DeflectionDiagram({
         strokeWidth={0.5}
       />
       <text
-        x={svgWidth - margin - 28}
+        x={svgWidth - margin - 26}
         y={margin + 34}
         fontSize={10}
         textAnchor="end"
@@ -338,8 +326,8 @@ export default function DeflectionDiagram({
         fontSize={11}
         fill="#555"
       >
-        3D-ish view of tub interior with water & skimmer. Redder walls/bottom = higher vessel
-        deflection; redder band = higher frame deflection. Values shown in mm.
+        3D-like view of tub interior with water & skimmer. Redder walls/bottom = higher vessel
+        deflection; redder band = higher frame deflection. Values displayed in mm.
       </text>
     </svg>
   );
