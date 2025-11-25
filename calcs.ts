@@ -70,7 +70,8 @@ export function uniformLoadBottomStrip(
   tub: TubGeometry,
   materials: MaterialsConfig
 ): number {
-  const h_water = tub.H_tub_in - tub.water_freeboard_in; // inches
+  // water_freeboard_in is actually water depth from the bottom
+const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in); // inches
   const gamma = materials.water.gamma_psi_per_in;
 
   // average hydrostatic pressure across the depth
@@ -137,7 +138,9 @@ export function extrusionDeflection(
   // tributary length on each extrusion
   const trib_L = tub.L_tub_in / tub.n_transverse;
 
-  const h_water = tub.H_tub_in - tub.water_freeboard_in;
+  // water_freeboard_in is actually water depth from the bottom
+const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+
   const gamma = materials.water.gamma_psi_per_in;
 
   // average hydrostatic pressure along depth
@@ -180,7 +183,9 @@ export function bottomDeflectionProfile(
   const L_span = tub.L_tub_in / (tub.n_transverse - 1); // distance between extrusions
 
   // same load as mdfBottomDeflection: full-width water load
-  const h_water = tub.H_tub_in - tub.water_freeboard_in;
+  // water_freeboard_in is actually water depth from the bottom
+const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+
   const gamma = materials.water.gamma_psi_per_in;
   const p_avg = gamma * (h_water / 2);           // psi
   const w_per_in_strip = p_avg * 1;              // lb/in on 1" strip
@@ -228,7 +233,9 @@ export function shortSideDeflectionProfile(
   const n_spans = 2;                // one post in the middle
   const L_span = W_total / n_spans;
 
-  const h_water = tub.H_tub_in - tub.water_freeboard_in;
+  // water_freeboard_in is actually water depth from the bottom
+const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+
   const gamma = materials.water.gamma_psi_per_in;
 
   // lateral line load on wall: integrate p(z)=gamma*z from 0..h
@@ -276,7 +283,9 @@ export function longSideDeflectionProfile(
   const n_spans = 4;                 // 3 posts + 2 corners
   const L_span = L_total / n_spans;
 
-  const h_water = tub.H_tub_in - tub.water_freeboard_in;
+  // water_freeboard_in is actually water depth from the bottom
+const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+
   const gamma = materials.water.gamma_psi_per_in;
   const w = gamma * h_water * h_water / 2; // lb/in lateral
 
