@@ -1,5 +1,5 @@
 "use client";
-
+import DeflectionDiagram from "./DeflectionDiagram";
 import React, { useState } from "react";
 
 import tubDefaults from "../defaultTub.json";
@@ -181,6 +181,12 @@ export default function Page() {
           />
         </div>
       </section>
+      
+{/* Deflection Visualization */}
+<section style={{ marginTop: "3rem" }}>
+  <h2>Deflection Visualization</h2>
+  <DeflectionDiagram tub={tub} frame={frame} bottom={bottom} extr={extr} />
+</section>
 
       {/* Results */}
       <section style={{ marginTop: "3rem" }}>
