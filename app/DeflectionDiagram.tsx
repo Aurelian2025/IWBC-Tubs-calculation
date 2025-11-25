@@ -30,99 +30,87 @@ export default function DeflectionDiagram({
   bottom: BottomResult;
   extr: ExtrResult;
 }) {
-  const svgWidth = 550;
-  const svgHeight = 300;
+  const width = 600;
+  const height = 380;
   const margin = 20;
 
-  const scaleX = svgWidth / frame.L_frame_in;
-  const scaleY = svgHeight / frame.W_frame_in;
+  // Basic “3D” scaling – not physically exact, but proportional
+  const kWidth = 4;      // px per inch for tub width
+  const kDepth = 2.4;    // px per inch for tub length
+  const kHeight = 3;     // px per inch for tub height
 
-  // Frame rectangle
-  const frameW = frame.L_frame_in * scaleX;
-  const frameH = frame.W_frame_in * scaleY;
-  const frameX = margin;
-  const frameY = margin;
+  const tubWpx = tub.W_tub_in * kWidth;
+  const tubDpx = tub.L_tub_in * kDepth;
+  const tubHpx = tub.H_tub_in * kHeight;
 
-  // Tub rectangle (centered)
-  const tubW = tub.L_tub_in * scaleX;
-  const tubH = tub.W_tub_in * scaleY;
-  const tubX = frameX + (frameW - tubW) / 2;
-  const tubY = frameY + (frameH - tubH) / 2;
+  // Clamp so it fits reasonably in the SVG
+  const maxTubW = 260;
+  const scaleFactor = Math.min(1, maxTubW / tubWpx);
+  const W = tubWpx * scaleFactor;
+  const D = tubDpx * scaleFactor;
+  const H = tubHpx * scaleFactor;
 
-  // Extrusions: evenly spaced along tub length
-  const n = tub.n_transverse;
-  const spacing = tub.L_tub_in / (n - 1);
+  // “Iso” view base point for front–left top corner
+  const baseX = margin + 80;
+  const baseY = margin + 80;
 
-  // Deflection intensity scaling
-  const maxDef = Math.max(bottom.delta_max, extr.delta_max);
-  const bottomIntensity = bottom.delta_max / maxDef;
-  const extrIntensity = extr.delta_max / maxDef;
+  // Depth direction: goes up+right
+  const depthDx = D;
+  const depthDy = -D * 0.5;
 
-  const colorFromIntensity = (i: number) => {
+  // Width direction: purely right
+  const widthDx = W;
+  const widthDy = 0;
+
+  // Height direction: purely down
+  const heightDx = 0;
+  const heightDy = H;
+
+  // Top rectangle of tub (4 corners)
+  const TFL = { x: baseX, y: baseY }; // Top Front Left
+  const TFR = { x: baseX + widthDx, y: baseY + widthDy }; // Top Front Right
+  const TBL = { x: baseX + depthDx, y: baseY + depthDy }; // Top Back Left
+  const TBR = {
+    x: baseX + depthDx + widthDx,
+    y: baseY + depthDy + widthDy
+  }; // Top Back Right
+
+  // Bottom of front and side faces
+  const BFL = { x: TFL.x + heightDx, y: TFL.y + heightDy }; // Bottom Front Left
+  const BFR = { x: TFR.x + heightDx, y: TFR.y + heightDy }; // Bottom Front Right
+  const BBL = { x: TBL.x + heightDx, y: TBL.y + heightDy }; // Bottom Back Left
+  const BBR = { x: TBR.x + heightDx, y: TBR.y + heightDy }; // Bottom Back Right
+
+  // Deflection intensities: vessel (bottom/walls) vs frame (extrusions)
+  const eps = 1e-9;
+  const maxDef = Math.max(bottom.delta_max, extr.delta_max, eps);
+
+  const vesselIntensity = bottom.delta_max / maxDef;
+  const frameIntensity = extr.delta_max / maxDef;
+
+  const faceColor = (i: number) => {
     const clamped = Math.max(0, Math.min(1, i));
     const r = 255;
-    const g = Math.round(200 * (1 - clamped));
-    const b = Math.round(200 * (1 - clamped));
-    return `rgb(${r},${g},${b})`; // pink → red
+    const g = Math.round(220 * (1 - clamped));
+    const b = Math.round(220 * (1 - clamped));
+    return `rgb(${r},${g},${b})`; // light pink → strong red
   };
 
-  const tubFill = colorFromIntensity(bottomIntensity);
-  const extrColor = colorFromIntensity(extrIntensity);
+  const vesselColor = faceColor(vesselIntensity);
+  const frameColor = faceColor(frameIntensity);
 
-  const extrLines = [];
-  for (let i = 0; i < n; i++) {
-    const xLocal = i * spacing;
-    const x = tubX + xLocal * scaleX;
+  // Helper to make string for polygon
+  const poly = (pts: { x: number; y: number }[]) =>
+    pts.map((p) => `${p.x},${p.y}`).join(" ");
 
-    extrLines.push(
-      <line
-        key={i}
-        x1={x}
-        y1={tubY}
-        x2={x}
-        y2={tubY + tubH}
-        stroke={extrColor}
-        strokeWidth={3}
-      />
-    );
-  }
+  // For visual clarity: we will color
+  // - front & side faces based on vessel deflection (MDF walls/bottom)
+  // - a “frame band” at the bottom edge based on frame deflection
+  const frontFace = [TFL, TFR, BFR, BFL];
+  const sideFace = [TFR, TBR, BBR, BFR];
+  const topFace = [TBL, TBR, TFR, TFL];
 
-  // Max bottom deflection point
-  const mx = tubX + tubW / 2;
-  const my = tubY + tubH / 2;
-
-  return (
-    <svg width={svgWidth + margin * 2} height={svgHeight + margin * 2}>
-      {/* Frame outline */}
-      <rect
-        x={frameX}
-        y={frameY}
-        width={frameW}
-        height={frameH}
-        fill="none"
-        stroke="#555"
-        strokeWidth={2}
-      />
-
-      {/* Tub outline & fill */}
-      <rect
-        x={tubX}
-        y={tubY}
-        width={tubW}
-        height={tubH}
-        fill={tubFill}
-        stroke="#222"
-        strokeWidth={2}
-      />
-
-      {/* Extrusion lines */}
-      {extrLines}
-
-      {/* Max deflection marker */}
-      <circle cx={mx} cy={my} r={6} fill="blue" />
-      <text x={mx + 8} y={my + 4} fontSize={11} fill="blue">
-        max δ bottom
-      </text>
-    </svg>
-  );
-}
+  // Frame band approximated as a strip just below the tub bottom (front edge)
+  const frameBandHeight = 10;
+  const FBL = { x: BFL.x, y: BFL.y + frameBandHeight };
+  const FBR = { x: BFR.x, y: BFR.
