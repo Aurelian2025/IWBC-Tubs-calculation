@@ -245,53 +245,56 @@ export function bottomDeflectionProfile(
 
 // -------------------------
 // Short-side wall deflection profile (5 points)
-// Right wall treated as 2 spans (1 post in the middle)
+// 4-edge simply supported plate under average lateral pressure
 // -------------------------
+
 export function shortSideDeflectionProfile(
   tub: TubGeometry,
   materials: MaterialsConfig,
   nPoints: number = 5
 ): { x_in: number; deflection_in: number }[] {
-  const W_total = tub.W_tub_in;
-  const n_spans = 2;                // one post in the middle
-  const L_span = W_total / n_spans;
+  // water_freeboard_in is used as water depth from the bottom (in)
+  const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+  const gamma = materials.water.gamma_psi_per_in; // psi per inch of depth
 
-  // water_freeboard_in is actually water depth from the bottom
-const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+  // Lateral pressure on wall is triangular from 0 at free surface to γ*h at bottom.
+  // We approximate the plate as under uniform **average** pressure:
+  // q_side ≈ (γ * h_water) / 2
+  const q_side = gamma * h_water * 0.5; // psi
 
-  const gamma = materials.water.gamma_psi_per_in;
+  // Plate dimensions for the short side (right wall):
+  // a = shorter side (vertical height), b = longer side (horizontal width)
+  const a = tub.H_tub_in; // height (in)
+  const b = tub.W_tub_in; // width (in) – we sample deflection along this direction
 
-  // lateral line load on wall: integrate p(z)=gamma*z from 0..h
-  // w = gamma * h^2 / 2   (lb/in)
-  const w = gamma * h_water * h_water / 2;
-
-  const t = tub.t_mdf_side_in;
-  const H = tub.H_tub_in;           // full wall height for stiffness
-  const I = (H * Math.pow(t, 3)) / 12;
+  const t = tub.t_mdf_side_in;        // wall thickness (in)
   const E = materials.mdf_extira.E_psi;
+  const D = plateFlexuralRigidity(E, t); // lb·in
+
+  // Max deflection of a simply supported rectangular plate under uniform load:
+  // w_max ≈ q * a^4 / (64 * D)
+  const w_max = (q_side * Math.pow(a, 4)) / (64 * D);
+
+  // We sample deflection along the width b, from 0 to b
+  const n = nPoints < 2 ? 2 : nPoints;
+  const dx = b / (n - 1);
 
   const result: { x_in: number; deflection_in: number }[] = [];
 
-  if (nPoints <= 1) {
-    const mid = L_span / 2;
-    result.push({
-      x_in: mid,
-      deflection_in: beamDeflectionUniformAt(L_span, w, E, I, mid)
-    });
-    return result;
-  }
+  for (let i = 0; i < n; i++) {
+    const x = i * dx;
 
-  const dx_total = W_total / (nPoints - 1);
+    // Simple mode shape along width: 0 at edges, max at middle
+    // w(x) ≈ w_max * sin(pi * x / b)
+    const shape = Math.sin((Math.PI * x) / b);
+    const w = w_max * shape;
 
-  for (let i = 0; i < nPoints; i++) {
-    const x_global = i * dx_total;
-    const x_local = x_global % L_span;
-    const v = beamDeflectionUniformAt(L_span, w, E, I, x_local);
-    result.push({ x_in: x_global, deflection_in: v });
+    result.push({ x_in: x, deflection_in: w });
   }
 
   return result;
 }
+
 
 // -------------------------
 // Long-side wall deflection profile (10 points)
