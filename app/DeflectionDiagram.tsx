@@ -43,56 +43,54 @@ export default function DeflectionDiagram({
   shortProfile: DeflectionPoint[];
   longProfile: DeflectionPoint[];
 }) {
-  // ... keep your existing 3D drawing code here ...
-
   const svgWidth = 720;
   const svgHeight = 420;
   const margin = 40;
 
-  // Base scales
+  // Base scales for 3D-ish view
   const pxPerInLength = 6; // along L
   const pxPerInHeight = 5; // vertical
-  const pxPerInDepth = 2.5; // "depth" into page
+  const pxPerInDepth = 2.5; // depth (tub width)
 
-  // Raw pixel sizes
+  // Raw sizes
   let Lpx = tub.L_tub_in * pxPerInLength;
   let Hpx = tub.H_tub_in * pxPerInHeight;
   let Dpx = tub.W_tub_in * pxPerInDepth;
 
-  // Clamp into view
+  // Fit into viewport
   const maxL = svgWidth - 2 * margin - 150;
   const maxH = svgHeight - 2 * margin - 40;
   const scale = Math.min(
     1,
     maxL / Lpx,
-    maxH / (Hpx + Dpx * 0.7) // 0.7 factor for depth projection
+    maxH / (Hpx + Dpx * 0.7)
   );
 
   Lpx *= scale;
   Hpx *= scale;
   Dpx *= scale;
 
-  // Depth offset (top face shifted back-right)
+  // Depth projection
   const depthX = Dpx;
   const depthY = -Dpx * 0.6;
 
-  // Base origin = top-left front corner of tub
+  // Origin for front-top-left
   const baseX = margin + 60;
   const baseY = margin + 80;
 
-  // Front face corners (outer shell)
-  const FTL = { x: baseX, y: baseY }; // front-top-left
+  // Front outer corners
+  const FTL = { x: baseX, y: baseY };
   const FTR = { x: baseX + Lpx, y: baseY };
   const FBL = { x: baseX, y: baseY + Hpx };
   const FBR = { x: baseX + Lpx, y: baseY + Hpx };
 
-  // Back face (top) corners
+  // Back outer corners
   const BTL = { x: FTL.x + depthX, y: FTL.y + depthY };
   const BTR = { x: FTR.x + depthX, y: FTR.y + depthY };
   const BBL = { x: FBL.x + depthX, y: FBL.y + depthY };
   const BBR = { x: FBR.x + depthX, y: FBR.y + depthY };
 
-  // Inner offset for wall thickness (visual only)
+  // Inner “shell” offset (visual wall thickness)
   const wallOffset = 4;
   const iFTL = { x: FTL.x + wallOffset, y: FTL.y + wallOffset };
   const iFTR = { x: FTR.x - wallOffset, y: FTR.y + wallOffset };
@@ -104,72 +102,41 @@ export default function DeflectionDiagram({
   const iBBL = { x: BBL.x + wallOffset, y: BBL.y - wallOffset };
   const iBBR = { x: BBR.x - wallOffset, y: BBR.y - wallOffset };
 
-  // Water level based on depth inside tub
+  // Water level (8" from top via freeboard)
   const hWaterIn = tub.H_tub_in - tub.water_freeboard_in;
   const waterFrac = Math.max(0, Math.min(1, hWaterIn / tub.H_tub_in));
   const waterDropPx = Hpx * waterFrac;
 
-  // Water plane along front inner face
   const wIFTL = { x: iFTL.x, y: iFTL.y + waterDropPx };
   const wIFTR = { x: iFTR.x, y: iFTR.y + waterDropPx };
-  // And corresponding back inner points
   const wIBTL = { x: iBTL.x, y: iBTL.y + waterDropPx };
   const wIBTR = { x: iBTR.x, y: iBTR.y + waterDropPx };
 
   // Deflection intensities
   const eps = 1e-9;
-  const maxDef = Math.max(bottom.delta_max, extr.delta_max, eps);
-  const vesselIntensity = bottom.delta_max / maxDef;
-  const frameIntensity = extr.delta_max / maxDef;
+  const maxDefSingle = Math.max(bottom.delta_max, extr.delta_max, eps);
+
+  const vesselIntensity = bottom.delta_max / maxDefSingle;
+  const frameIntensity = extr.delta_max / maxDefSingle;
 
   const colorFromIntensity = (i: number) => {
     const c = Math.max(0, Math.min(1, i));
     const r = 255;
     const g = Math.round(220 * (1 - c));
     const b = Math.round(220 * (1 - c));
-    return `rgb(${r},${g},${b})`; // light pink → strong red
+    return `rgb(${r},${g},${b})`;
   };
 
   const vesselColor = colorFromIntensity(vesselIntensity);
   const frameColor = colorFromIntensity(frameIntensity);
 
-  // Deflection in mm for display
   const vesselDefMm = bottom.delta_max * INCH_TO_MM;
   const frameDefMm = extr.delta_max * INCH_TO_MM;
- // Build legend lines for all points in mm
-const legendLines: string[] = [];
 
-legendLines.push(`σ_vessel_max: ${bottom.sigma_max.toFixed(1)} psi`);
-legendLines.push(`σ_frame_max: ${extr.sigma_max.toFixed(1)} psi`);
-legendLines.push("");
-
-legendLines.push("Bottom deflection (mm):");
-bottomProfile.forEach((p, i) => {
-  const mm = p.deflection_in * INCH_TO_MM;
-  legendLines.push(`B${i + 1} @ ${p.x_in.toFixed(1)} in: ${mm.toFixed(2)}`);
-});
-
-legendLines.push("");
-legendLines.push("Short-side deflection (mm):");
-shortProfile.forEach((p, i) => {
-  const mm = p.deflection_in * INCH_TO_MM;
-  legendLines.push(`S${i + 1} @ ${p.x_in.toFixed(1)} in: ${mm.toFixed(2)}`);
-});
-
-legendLines.push("");
-legendLines.push("Long-side deflection (mm):");
-longProfile.forEach((p, i) => {
-  const mm = p.deflection_in * INCH_TO_MM;
-  legendLines.push(`L${i + 1} @ ${p.x_in.toFixed(1)} in: ${mm.toFixed(2)}`);
-});
-
-const legendX = svgWidth - margin - 10;
-const legendY = margin + 10;
-const lineHeight = 12;
   const poly = (pts: { x: number; y: number }[]) =>
     pts.map((p) => `${p.x},${p.y}`).join(" ");
 
-  // Faces (back to front draw order)
+  // Faces
   const topFace = [BTL, BTR, FTR, FTL];
   const rightOuter = [FTR, BTR, BBR, FBR];
   const frontOuter = [FTL, FTR, FBR, FBL];
@@ -183,13 +150,86 @@ const lineHeight = 12;
   const FB2 = { x: FBR.x, y: FBR.y + frameBandHeight };
   const frameBand = [FBL, FBR, FB2, FB1];
 
-  // Approximate bottom center for max vessel deflection marker
+  // Bottom center (max vessel deflection location marker)
   const bottomCenter = {
     x: (iFBL.x + iFBR.x + iBBL.x + iBBR.x) / 4,
     y: (iFBL.y + iFBR.y + iBBL.y + iBBR.y) / 4
   };
 
- 
+  // -----------------------------
+  // Map deflection profiles to points on surfaces (for circles)
+  // -----------------------------
+
+  // Helper linear interpolation between two SVG points
+  function lerpPoint(
+    p1: { x: number; y: number },
+    p2: { x: number; y: number },
+    t: number
+  ): { x: number; y: number } {
+    return {
+      x: p1.x + (p2.x - p1.x) * t,
+      y: p1.y + (p2.y - p1.y) * t
+    };
+  }
+
+  // Compute maximum deflection across all profiles (for circle size scaling)
+  const allDeflections = [
+    ...bottomProfile.map((p) => p.deflection_in),
+    ...shortProfile.map((p) => p.deflection_in),
+    ...longProfile.map((p) => p.deflection_in)
+  ];
+  const maxDefProfile = Math.max(...allDeflections.map((d) => Math.abs(d)), eps);
+
+  // Map bottomProfile along inner front bottom edge: iFBL -> iFBR
+  const bottomPointsSvg = bottomProfile.map((p) => {
+    const t = tub.L_tub_in > 0 ? p.x_in / tub.L_tub_in : 0;
+    const pos = lerpPoint(iFBL, iFBR, t);
+    return {
+      ...p,
+      svg: pos
+    };
+  });
+
+  // Map longProfile along inner right bottom edge: iFBR -> iBBR
+  const longPointsSvg = longProfile.map((p) => {
+    const t = tub.L_tub_in > 0 ? p.x_in / tub.L_tub_in : 0;
+    const pos = lerpPoint(iFBR, iBBR, t);
+    return {
+      ...p,
+      svg: pos
+    };
+  });
+
+  // Map shortProfile along inner front bottom edge but slightly above: iFBL -> iFBR
+  const shortPointsSvg = shortProfile.map((p) => {
+    const t = tub.W_tub_in > 0 ? p.x_in / tub.W_tub_in : 0;
+    const base = lerpPoint(iFBL, iFBR, t);
+    return {
+      ...p,
+      svg: { x: base.x, y: base.y - 8 } // lift a bit so they don't overlap bottom points
+    };
+  });
+
+  // Circle radius scaling
+  function radiusFromDeflection(defIn: number): number {
+    const frac = Math.max(0, Math.min(1, Math.abs(defIn) / maxDefProfile));
+    return 3 + 5 * frac; // between 3 and 8 px
+  }
+
+  // Build compact legend text (not listing all points, just explaining colors + maxs)
+  const legendLines: string[] = [
+    `vessel max δ: ${vesselDefMm.toFixed(3)} mm`,
+    `frame max δ: ${frameDefMm.toFixed(3)} mm`,
+    "",
+    "Bottom points: red circles",
+    "Short-side points: green circles",
+    "Long-side points: blue circles"
+  ];
+
+  const legendX = svgWidth - margin - 10;
+  const legendY = margin + 10;
+  const lineHeight = 12;
+
   return (
     <svg width={svgWidth} height={svgHeight}>
       {/* Thin outline for top */}
@@ -200,7 +240,7 @@ const lineHeight = 12;
         strokeWidth={1}
       />
 
-      {/* Outer right and front walls */}
+      {/* Outer walls */}
       <polygon
         points={poly(rightOuter)}
         fill="none"
@@ -214,7 +254,7 @@ const lineHeight = 12;
         strokeWidth={1.5}
       />
 
-      {/* Inner vessel walls (colored by vessel deflection) */}
+      {/* Inner vessel walls (color = vessel deflection) */}
       <polygon
         points={poly(rightInner)}
         fill={vesselColor}
@@ -235,98 +275,117 @@ const lineHeight = 12;
         stroke="#1b4e8a"
         strokeWidth={1}
       />
+
       {/* Water: front face */}
       <polygon
-        points={poly([
-          wIFTL,
-          wIFTR,
-          iFBR,
-          iFBL
-        ])}
+        points={poly([wIFTL, wIFTR, iFBR, iFBL])}
         fill="rgba(120,170,255,0.5)"
         stroke="none"
       />
+
       {/* Water: right face */}
       <polygon
-        points={poly([
-          wIFTR,
-          wIBTR,
-          iBBR,
-          iFBR
-        ])}
+        points={poly([wIFTR, wIBTR, iBBR, iFBR])}
         fill="rgba(120,170,255,0.4)"
         stroke="none"
       />
 
-      
-      {/* Frame band under front bottom (frame deflection) */}
+      {/* Frame band */}
       <polygon
         points={poly(frameBand)}
         fill={frameColor}
         stroke="#333"
         strokeWidth={1}
       />
-      <text
-        x={(FB1.x + FB2.x) / 2}
-        y={FB1.y + frameBandHeight + 12}
-        fontSize={10}
-        textAnchor="middle"
-        fill="#444"
-      >
-        frame / extrusion region
-      </text>
 
-      {/* Max vessel deflection marker (bottom mid) */}
+      {/* Max vessel deflection marker */}
       <circle cx={bottomCenter.x} cy={bottomCenter.y} r={5} fill="blue" />
-      <text
-        x={bottomCenter.x + 8}
-        y={bottomCenter.y + 4}
-        fontSize={10}
-        fill="blue"
-      >
-        max δ (vessel)
-      </text>
 
-      {/* Legend with mm values */}
-      <rect
-        x={svgWidth - margin - 22}
-        y={margin}
-        width={18}
-        height={12}
-        fill={vesselColor}
-        stroke="#333"
-        strokeWidth={0.5}
-      />
-      <text
-        x={svgWidth - margin - 26}
-        y={margin + 10}
-        fontSize={10}
-        textAnchor="end"
-        fill="#222"
-      >
-        vessel deflection: {vesselDefMm.toFixed(3)} mm
-      </text>
+      {/* Bottom deflection points (red) */}
+      {bottomPointsSvg.map((p, idx) => {
+        const mm = p.deflection_in * INCH_TO_MM;
+        const r = radiusFromDeflection(p.deflection_in);
+        return (
+          <g key={`b-${idx}`}>
+            <circle
+              cx={p.svg.x}
+              cy={p.svg.y}
+              r={r}
+              fill="rgba(220,0,0,0.8)"
+              stroke="#660000"
+              strokeWidth={1}
+            >
+              <title>
+                {`Bottom B${idx + 1}: x=${p.x_in.toFixed(1)} in, δ=${mm.toFixed(
+                  3
+                )} mm`}
+              </title>
+            </circle>
+          </g>
+        );
+      })}
 
-      <rect
-        x={svgWidth - margin - 22}
-        y={margin + 24}
-        width={18}
-        height={12}
-        fill={frameColor}
-        stroke="#333"
-        strokeWidth={0.5}
-      />
-      <text
-        x={svgWidth - margin - 26}
-        y={margin + 34}
-        fontSize={10}
-        textAnchor="end"
-        fill="#222"
-      >
-        frame deflection: {frameDefMm.toFixed(3)} mm
-      </text>
+      {/* Short-side deflection points (green) */}
+      {shortPointsSvg.map((p, idx) => {
+        const mm = p.deflection_in * INCH_TO_MM;
+        const r = radiusFromDeflection(p.deflection_in);
+        return (
+          <g key={`s-${idx}`}>
+            <circle
+              cx={p.svg.x}
+              cy={p.svg.y}
+              r={r}
+              fill="rgba(0,180,0,0.8)"
+              stroke="#004400"
+              strokeWidth={1}
+            >
+              <title>
+                {`Short S${idx + 1}: x=${p.x_in.toFixed(1)} in, δ=${mm.toFixed(
+                  3
+                )} mm`}
+              </title>
+            </circle>
+          </g>
+        );
+      })}
 
-    
+      {/* Long-side deflection points (blue) */}
+      {longPointsSvg.map((p, idx) => {
+        const mm = p.deflection_in * INCH_TO_MM;
+        const r = radiusFromDeflection(p.deflection_in);
+        return (
+          <g key={`l-${idx}`}>
+            <circle
+              cx={p.svg.x}
+              cy={p.svg.y}
+              r={r}
+              fill="rgba(0,0,220,0.8)"
+              stroke="#000066"
+              strokeWidth={1}
+            >
+              <title>
+                {`Long L${idx + 1}: x=${p.x_in.toFixed(1)} in, δ=${mm.toFixed(
+                  3
+                )} mm`}
+              </title>
+            </circle>
+          </g>
+        );
+      })}
+
+      {/* Compact legend */}
+      {legendLines.map((text, idx) => (
+        <text
+          key={idx}
+          x={legendX}
+          y={legendY + idx * lineHeight}
+          fontSize={10}
+          textAnchor="end"
+          fill="#222"
+        >
+          {text}
+        </text>
+      ))}
     </svg>
   );
 }
