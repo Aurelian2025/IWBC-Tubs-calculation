@@ -10,7 +10,10 @@ import {
   FrameGeometry,
   MaterialsConfig,
   mdfBottomDeflection,
-  extrusionDeflection
+  extrusionDeflection,
+  bottomDeflectionProfile,
+  shortSideDeflectionProfile,
+  longSideDeflectionProfile
 } from "../calcs";
 
 type LabelInputProps = {
@@ -91,6 +94,9 @@ export default function Page() {
 
   const bottom = mdfBottomDeflection(tub, materials);
   const extr = extrusionDeflection(tub, frame, materials);
+const bottomProfile = bottomDeflectionProfile(tub, materials, 10);
+const shortProfile = shortSideDeflectionProfile(tub, materials, 5);
+const longProfile = longSideDeflectionProfile(tub, materials, 10);
 
   return (
     <main
@@ -181,7 +187,16 @@ export default function Page() {
 {/* Deflection Visualization */}
 <section style={{ marginTop: "3rem" }}>
   <h2>Deflection Visualization</h2>
-  <DeflectionDiagram tub={tub} frame={frame} bottom={bottom} extr={extr} />
+  <DeflectionDiagram
+  tub={tub}
+  frame={frame}
+  bottom={bottom}
+  extr={extr}
+  bottomProfile={bottomProfile}
+  shortProfile={shortProfile}
+  longProfile={longProfile}
+/>
+
 </section>
 
       {/* Results */}
