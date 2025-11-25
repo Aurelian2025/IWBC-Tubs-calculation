@@ -102,11 +102,7 @@ export default function Page() {
       }}
     >
       <h1>IWBC Tub Deflection Calculator</h1>
-      <p style={{ marginTop: "0.5rem" }}>
-        Values are loaded from <code>materials.json</code> and{" "}
-        <code>defaultTub.json</code>.
-      </p>
-
+      
       {/* Inputs */}
       <section
         style={{
@@ -195,8 +191,6 @@ export default function Page() {
           data={{
             "Span between extrusions (in)": bottom.span,
             "Uniform load w (lb/in)": bottom.w_strip,
-            "Max Moment M (lb·in)": bottom.M_max,
-            "Max Deflection δ (in)": bottom.delta_max,
             "Max Stress σ (psi)": bottom.sigma_max
           }}
         />
@@ -206,8 +200,6 @@ export default function Page() {
           data={{
             "Extrusion Span (in)": extr.span,
             "Uniform load w (lb/in)": extr.w,
-            "Max Moment M (lb·in)": extr.M_max,
-            "Max Deflection δ (in)": extr.delta_max,
             "Max Stress σ (psi)": extr.sigma_max
           }}
         />
