@@ -31,6 +31,21 @@ export type FrameGeometry = {
 
   extr_size_mm: number; // 25×25 extrusion side dimension, mm
 };
+// -------------------------
+// Plate helpers
+// -------------------------
+
+// approximate Poisson's ratio for MDF
+const POISSON_MDF = 0.30;
+
+// Flexural rigidity of a plate: D = E t^3 / [12 (1 - ν^2)]
+function plateFlexuralRigidity(
+  E_psi: number,
+  t_in: number,
+  nu: number = POISSON_MDF
+) {
+  return (E_psi * Math.pow(t_in, 3)) / (12 * (1 - nu * nu));
+}
 
 // -------------------------
 // Beam Formulas
