@@ -196,40 +196,52 @@ const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
 
 // -------------------------
 // Bottom deflection profile (10 points)
-// Repeats the span between extrusions along the full tub length
+// 4-edge simply supported plate; profile along tub length
 // -------------------------
+
 export function bottomDeflectionProfile(
   tub: TubGeometry,
   materials: MaterialsConfig,
   nPoints: number = 10
 ): { x_in: number; deflection_in: number }[] {
-  const L_total = tub.L_tub_in;
-  const L_span = tub.L_tub_in / (tub.n_transverse - 1); // distance between extrusions
+  // water_freeboard_in is used as water depth from the bottom (in)
+  const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+  const gamma = materials.water.gamma_psi_per_in; // psi per inch of depth
 
-  // same load as mdfBottomDeflection: full-width water load
-  // water_freeboard_in is actually water depth from the bottom
-const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+  // Uniform pressure on the bottom (psi)
+  const q_bottom = gamma * h_water;
 
-  const gamma = materials.water.gamma_psi_per_in;
-  const p_avg = gamma * (h_water / 2);           // psi
-  const w_per_in_strip = p_avg * 1;              // lb/in on 1" strip
-  const w = w_per_in_strip * tub.W_tub_in;       // lb/in along span
+  // Plate properties: use same as mdfBottomDeflection
+  const a = Math.min(tub.L_tub_in, tub.W_tub_in); // shorter side of plate (in)
+  const t = tub.t_mdf_bottom_in;                  // thickness (in)
+  const E = materials.mdf_extira.E_psi;           // psi
+  const D = plateFlexuralRigidity(E, t);          // lb·in
 
-  const b = tub.W_tub_in;
-  const t = tub.t_mdf_bottom_in;
-  const I = (b * Math.pow(t, 3)) / 12;
-  const E = materials.mdf_extira.E_psi;
+  // Max deflection from plate theory (simply supported, uniform load)
+  // w_max ≈ q * a^4 / (64 * D)
+  const w_max = (q_bottom * Math.pow(a, 4)) / (64 * D);
+
+  // We sample deflection along the tub length (L direction)
+  const L_len = tub.L_tub_in;
+  const n = nPoints < 2 ? 2 : nPoints;
+  const dx = L_len / (n - 1);
 
   const result: { x_in: number; deflection_in: number }[] = [];
 
-  if (nPoints <= 1) {
-    const mid = L_span / 2;
-    result.push({
-      x_in: mid,
-      deflection_in: beamDeflectionUniformAt(L_span, w, E, I, mid)
-    });
-    return result;
+  for (let i = 0; i < n; i++) {
+    const x = i * dx;
+
+    // Simple mode shape along length: 0 at x=0 and x=L, max at midspan
+    // w(x) ≈ w_max * sin(pi * x / L)
+    const shape = Math.sin((Math.PI * x) / L_len);
+    const w = w_max * shape;
+
+    result.push({ x_in: x, deflection_in: w });
   }
+
+  return result;
+}
+
 
   const dx_total = L_total / (nPoints - 1);
 
