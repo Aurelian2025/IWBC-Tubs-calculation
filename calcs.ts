@@ -49,6 +49,22 @@ function plateFlexuralRigidity(
 ) {
   return (E_psi * Math.pow(t_in, 3)) / (12 * (1 - nu * nu));
 }
+// Normalized plate measurement points (u,v) in [0,1]x[0,1]
+// Pattern roughly matches your image: 4 top, 2 mid, 4 bottom.
+const PLATE_SAMPLE_POINTS: { u: number; v: number }[] = [
+  { u: 0.05, v: 0.80 },
+  { u: 1 / 3, v: 0.80 },
+  { u: 2 / 3, v: 0.80 },
+  { u: 0.95, v: 0.80 },
+
+  { u: 0.15, v: 0.50 },
+  { u: 0.85, v: 0.50 },
+
+  { u: 0.05, v: 0.20 },
+  { u: 1 / 3, v: 0.20 },
+  { u: 2 / 3, v: 0.20 },
+  { u: 0.95, v: 0.20 }
+];
 
 // -------------------------
 // Beam Formulas
@@ -223,24 +239,26 @@ export function bottomDeflectionProfile(
   const D = plateFlexuralRigidity(E, t);          // lb·in
 
   // Max deflection from plate theory (simply supported, uniform load)
-  // w_max ≈ q * a^4 / (64 * D)
   const w_max =
-  PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D;
+    PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D;
 
+  const L_len = tub.L_tub_in; // length direction
+  const W_len = tub.W_tub_in; // width direction
 
-  // We sample deflection along the tub length (L direction)
-  const L_len = tub.L_tub_in;
-  const n = nPoints < 2 ? 2 : nPoints;
-  const dx = L_len / (n - 1);
+  const pts = PLATE_SAMPLE_POINTS.slice(0, nPoints);
 
   const result: { x_in: number; deflection_in: number }[] = [];
 
-  for (let i = 0; i < n; i++) {
-    const x = i * dx;
+  for (const p of pts) {
+    const u = p.u; // 0..1 along length
+    const v = p.v; // 0..1 along width
 
-    // Simple mode shape along length: 0 at x=0 and x=L, max at midspan
-    // w(x) ≈ w_max * sin(pi * x / L)
-    const shape = Math.sin((Math.PI * x) / L_len);
+    // physical position in inches (we only return x for now)
+    const x = u * L_len;
+    // const y = v * W_len; // could be returned later if needed
+
+    // plate mode shape: 0 at edges, max at center
+    const shape = Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
     const w = w_max * shape;
 
     result.push({ x_in: x, deflection_in: w });
@@ -248,6 +266,7 @@ export function bottomDeflectionProfile(
 
   return result;
 }
+
 
 
 // -------------------------
@@ -260,42 +279,33 @@ export function shortSideDeflectionProfile(
   materials: MaterialsConfig,
   nPoints: number = 5
 ): { x_in: number; deflection_in: number }[] {
-  // water_freeboard_in is used as water depth from the bottom (in)
   const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
-  const gamma = materials.water.gamma_psi_per_in; // psi per inch of depth
+  const gamma = materials.water.gamma_psi_per_in;
 
-  // Lateral pressure on wall is triangular from 0 at free surface to γ*h at bottom.
-  // We approximate the plate as under uniform **average** pressure:
-  // q_side ≈ (γ * h_water) / 2
+  // average lateral pressure on wall
   const q_side = gamma * h_water * 0.5; // psi
 
-  // Plate dimensions for the short side (right wall):
-  // a = shorter side (vertical height), b = longer side (horizontal width)
-  const a = tub.H_tub_in; // height (in)
-  const b = tub.W_tub_in; // width (in) – we sample deflection along this direction
-
-  const t = tub.t_mdf_side_in;        // wall thickness (in)
+  const a = tub.H_tub_in; // shorter side = height
+  const b = tub.W_tub_in; // longer side = width
+  const t = tub.t_mdf_side_in;
   const E = materials.mdf_extira.E_psi;
-  const D = plateFlexuralRigidity(E, t); // lb·in
+  const D = plateFlexuralRigidity(E, t);
 
-  // Max deflection of a simply supported rectangular plate under uniform load:
-  // w_max ≈ q * a^4 / (64 * D)
   const w_max =
-  PLATE_DEFLECTION_COEFF * (q_side * Math.pow(a, 4)) / D;
+    PLATE_DEFLECTION_COEFF * (q_side * Math.pow(a, 4)) / D;
 
-
-  // We sample deflection along the width b, from 0 to b
-  const n = nPoints < 2 ? 2 : nPoints;
-  const dx = b / (n - 1);
+  const pts = PLATE_SAMPLE_POINTS.slice(0, nPoints);
 
   const result: { x_in: number; deflection_in: number }[] = [];
 
-  for (let i = 0; i < n; i++) {
-    const x = i * dx;
+  for (const p of pts) {
+    const u = p.u; // 0..1 along width b
+    const v = p.v; // 0..1 along height a
 
-    // Simple mode shape along width: 0 at edges, max at middle
-    // w(x) ≈ w_max * sin(pi * x / b)
-    const shape = Math.sin((Math.PI * x) / b);
+    const x = u * b;
+    // const y = v * a;
+
+    const shape = Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
     const w = w_max * shape;
 
     result.push({ x_in: x, deflection_in: w });
@@ -303,6 +313,7 @@ export function shortSideDeflectionProfile(
 
   return result;
 }
+
 
 
 // -------------------------
@@ -315,42 +326,33 @@ export function longSideDeflectionProfile(
   materials: MaterialsConfig,
   nPoints: number = 10
 ): { x_in: number; deflection_in: number }[] {
-  // water_freeboard_in is used as water depth from the bottom (in)
   const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
-  const gamma = materials.water.gamma_psi_per_in; // psi per inch of depth
+  const gamma = materials.water.gamma_psi_per_in;
 
-  // Lateral pressure on wall is triangular from 0 at free surface to γ*h at bottom.
-  // Approximate as uniform **average** pressure:
-  // q_side ≈ (γ * h_water) / 2
+  // average lateral pressure on wall
   const q_side = gamma * h_water * 0.5; // psi
 
-  // Plate dimensions for the long side wall:
-  // a = shorter side (vertical height), b = longer side (horizontal length)
-  const a = tub.H_tub_in; // height (in)
-  const b = tub.L_tub_in; // length (in) – we sample deflection along this direction
-
-  const t = tub.t_mdf_side_in;        // wall thickness (in)
+  const a = tub.H_tub_in; // shorter side = height
+  const b = tub.L_tub_in; // longer side = length
+  const t = tub.t_mdf_side_in;
   const E = materials.mdf_extira.E_psi;
-  const D = plateFlexuralRigidity(E, t); // lb·in
+  const D = plateFlexuralRigidity(E, t);
 
-  // Max deflection of a simply supported rectangular plate under uniform load:
-  // w_max ≈ q * a^4 / (64 * D)
   const w_max =
-  PLATE_DEFLECTION_COEFF * (q_side * Math.pow(a, 4)) / D;
+    PLATE_DEFLECTION_COEFF * (q_side * Math.pow(a, 4)) / D;
 
-
-  // We sample deflection along the length b, from 0 to b
-  const n = nPoints < 2 ? 2 : nPoints;
-  const dx = b / (n - 1);
+  const pts = PLATE_SAMPLE_POINTS.slice(0, nPoints);
 
   const result: { x_in: number; deflection_in: number }[] = [];
 
-  for (let i = 0; i < n; i++) {
-    const x = i * dx;
+  for (const p of pts) {
+    const u = p.u; // 0..1 along length b
+    const v = p.v; // 0..1 along height a
 
-    // Simple mode shape along length: 0 at edges, max at middle
-    // w(x) ≈ w_max * sin(pi * x / b)
-    const shape = Math.sin((Math.PI * x) / b);
+    const x = u * b;
+    // const y = v * a;
+
+    const shape = Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
     const w = w_max * shape;
 
     result.push({ x_in: x, deflection_in: w });
@@ -358,5 +360,4 @@ export function longSideDeflectionProfile(
 
   return result;
 }
-
 
