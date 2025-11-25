@@ -169,20 +169,22 @@ export function extrusionDeflection(
 
 // -------------------------
 // Bottom deflection profile (10 points)
-// Using the same beam model as mdfBottomDeflection
+// Repeats the span between extrusions along the full tub length
 // -------------------------
-
 export function bottomDeflectionProfile(
   tub: TubGeometry,
   materials: MaterialsConfig,
   nPoints: number = 10
 ): { x_in: number; deflection_in: number }[] {
-  // span between extrusions
-  const L = tub.L_tub_in / (tub.n_transverse - 1);
+  const L_total = tub.L_tub_in;
+  const L_span = tub.L_tub_in / (tub.n_transverse - 1); // distance between extrusions
 
   // same load as mdfBottomDeflection: full-width water load
-  const w_per_in_strip = uniformLoadBottomStrip(tub, materials); // lb/in for 1" strip
-  const w = w_per_in_strip * tub.W_tub_in;                       // lb/in along span
+  const h_water = tub.H_tub_in - tub.water_freeboard_in;
+  const gamma = materials.water.gamma_psi_per_in;
+  const p_avg = gamma * (h_water / 2);           // psi
+  const w_per_in_strip = p_avg * 1;              // lb/in on 1" strip
+  const w = w_per_in_strip * tub.W_tub_in;       // lb/in along span
 
   const b = tub.W_tub_in;
   const t = tub.t_mdf_bottom_in;
@@ -192,112 +194,117 @@ export function bottomDeflectionProfile(
   const result: { x_in: number; deflection_in: number }[] = [];
 
   if (nPoints <= 1) {
-    const mid = L / 2;
+    const mid = L_span / 2;
     result.push({
       x_in: mid,
-      deflection_in: beamDeflectionUniformAt(L, w, E, I, mid)
+      deflection_in: beamDeflectionUniformAt(L_span, w, E, I, mid)
     });
     return result;
   }
 
-  const dx = L / (nPoints - 1);
+  const dx_total = L_total / (nPoints - 1);
 
   for (let i = 0; i < nPoints; i++) {
-    const x = i * dx;
-    const v = beamDeflectionUniformAt(L, w, E, I, x);
-    result.push({ x_in: x, deflection_in: v });
+    const x_global = i * dx_total;
+    const x_local = x_global % L_span; // position within a span
+    const v = beamDeflectionUniformAt(L_span, w, E, I, x_local);
+    result.push({ x_in: x_global, deflection_in: v });
   }
 
   return result;
 }
 
+
 // -------------------------
 // Short-side wall deflection profile (5 points)
-// Treat each short side as a beam along tub width
+// Right wall treated as 2 spans (1 post in the middle)
 // -------------------------
-
 export function shortSideDeflectionProfile(
   tub: TubGeometry,
   materials: MaterialsConfig,
   nPoints: number = 5
 ): { x_in: number; deflection_in: number }[] {
-  const L = tub.W_tub_in; // span along width (short side length)
+  const W_total = tub.W_tub_in;
+  const n_spans = 2;                // one post in the middle
+  const L_span = W_total / n_spans;
 
   const h_water = tub.H_tub_in - tub.water_freeboard_in;
   const gamma = materials.water.gamma_psi_per_in;
-  const p_avg = gamma * (h_water / 2); // psi
 
-  // lateral load per unit length on the wall: p_avg * wall height
-  const w = p_avg * tub.H_tub_in; // lb/in along width
+  // lateral line load on wall: integrate p(z)=gamma*z from 0..h
+  // w = gamma * h^2 / 2   (lb/in)
+  const w = gamma * h_water * h_water / 2;
 
-  const t = tub.t_mdf_side_in;         // thickness of side wall (in)
-  const H = tub.H_tub_in;              // wall height (in)
-  const I = (H * Math.pow(t, 3)) / 12; // in^4
+  const t = tub.t_mdf_side_in;
+  const H = tub.H_tub_in;           // full wall height for stiffness
+  const I = (H * Math.pow(t, 3)) / 12;
   const E = materials.mdf_extira.E_psi;
 
   const result: { x_in: number; deflection_in: number }[] = [];
 
   if (nPoints <= 1) {
-    const mid = L / 2;
+    const mid = L_span / 2;
     result.push({
       x_in: mid,
-      deflection_in: beamDeflectionUniformAt(L, w, E, I, mid)
+      deflection_in: beamDeflectionUniformAt(L_span, w, E, I, mid)
     });
     return result;
   }
 
-  const dx = L / (nPoints - 1);
+  const dx_total = W_total / (nPoints - 1);
 
   for (let i = 0; i < nPoints; i++) {
-    const x = i * dx;
-    const v = beamDeflectionUniformAt(L, w, E, I, x);
-    result.push({ x_in: x, deflection_in: v });
+    const x_global = i * dx_total;
+    const x_local = x_global % L_span;
+    const v = beamDeflectionUniformAt(L_span, w, E, I, x_local);
+    result.push({ x_in: x_global, deflection_in: v });
   }
 
   return result;
 }
+
 // -------------------------
 // Long-side wall deflection profile (10 points)
-// Treat each long side as a beam along tub length
+// Long wall has 3 posts -> 4 spans
 // -------------------------
-
 export function longSideDeflectionProfile(
   tub: TubGeometry,
   materials: MaterialsConfig,
   nPoints: number = 10
 ): { x_in: number; deflection_in: number }[] {
-  const L = tub.L_tub_in; // span along length (long side length)
+  const L_total = tub.L_tub_in;
+  const n_spans = 4;                 // 3 posts + 2 corners
+  const L_span = L_total / n_spans;
 
   const h_water = tub.H_tub_in - tub.water_freeboard_in;
   const gamma = materials.water.gamma_psi_per_in;
-  const p_avg = gamma * (h_water / 2); // psi
+  const w = gamma * h_water * h_water / 2; // lb/in lateral
 
-  // lateral load per unit length on the wall: p_avg * wall height
-  const w = p_avg * tub.H_tub_in; // lb/in along length
-
-  const t = tub.t_mdf_side_in;         // thickness of side wall (in)
-  const H = tub.H_tub_in;              // wall height (in)
-  const I = (H * Math.pow(t, 3)) / 12; // in^4
+  const t = tub.t_mdf_side_in;
+  const H = tub.H_tub_in;
+  const I = (H * Math.pow(t, 3)) / 12;
   const E = materials.mdf_extira.E_psi;
 
   const result: { x_in: number; deflection_in: number }[] = [];
 
   if (nPoints <= 1) {
-    const mid = L / 2;
+    const mid = L_span / 2;
     result.push({
       x_in: mid,
-      deflection_in: beamDeflectionUniformAt(L, w, E, I, mid)
+      deflection_in: beamDeflectionUniformAt(L_span, w, E, I, mid)
     });
     return result;
   }
 
-  const dx = L / (nPoints - 1);
+  const dx_total = L_total / (nPoints - 1);
 
   for (let i = 0; i < nPoints; i++) {
-    const x = i * dx;
-    const v = beamDeflectionUniformAt(L, w, E, I, x);
-    result.push({ x_in: x, deflection_in: v });
+    const x_global = i * dx_total;
+    const x_local = x_global % L_span;
+    const v = beamDeflectionUniformAt(L_span, w, E, I, x_local);
+    result.push({ x_in: x_global, deflection_in: v });
   }
 
   return result;
 }
+
