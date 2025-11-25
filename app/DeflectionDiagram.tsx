@@ -30,182 +30,230 @@ export default function DeflectionDiagram({
   bottom: BottomResult;
   extr: ExtrResult;
 }) {
-  const width = 600;
-  const height = 380;
-  const margin = 20;
+  const svgWidth = 700;
+  const svgHeight = 350;
+  const margin = 40;
 
-  // Basic “3D” scaling – not physically exact, but proportional
-  const kWidth = 4;      // px per inch for tub width
-  const kDepth = 2.4;    // px per inch for tub length
-  const kHeight = 3;     // px per inch for tub height
+  // We use a side section: length (L) horizontally, depth (H) vertically.
+  const ppiBase = 8; // base pixels per inch before clamping
 
-  const tubWpx = tub.W_tub_in * kWidth;
-  const tubDpx = tub.L_tub_in * kDepth;
-  const tubHpx = tub.H_tub_in * kHeight;
+  const tubLengthPx = tub.L_tub_in * ppiBase;
+  const tubDepthPx = tub.H_tub_in * ppiBase;
 
-  // Clamp so it fits reasonably in the SVG
-  const maxTubW = 260;
-  const scaleFactor = Math.min(1, maxTubW / tubWpx);
-  const W = tubWpx * scaleFactor;
-  const D = tubDpx * scaleFactor;
-  const H = tubHpx * scaleFactor;
+  const maxLen = svgWidth - 2 * margin;
+  const maxDepth = svgHeight - 2 * margin;
 
-  // “Iso” view base point for front–left top corner
-  const baseX = margin + 80;
-  const baseY = margin + 80;
+  const scale = Math.min(
+    tubLengthPx > 0 ? maxLen / tubLengthPx : 1,
+    tubDepthPx > 0 ? maxDepth / tubDepthPx : 1,
+    1
+  );
 
-  // Depth direction: goes up+right
-  const depthDx = D;
-  const depthDy = -D * 0.5;
+  const Lpx = tub.L_tub_in * ppiBase * scale;
+  const Hpx = tub.H_tub_in * ppiBase * scale;
 
-  // Width direction: purely right
-  const widthDx = W;
-  const widthDy = 0;
+  // Tub outer rectangle (we’ll treat these as outside dims)
+  const tubX = margin;
+  const tubY = margin;
 
-  // Height direction: purely down
-  const heightDx = 0;
-  const heightDy = H;
+  // Water level
+  const h_water_in = tub.H_tub_in - tub.water_freeboard_in;
+  const waterDepthPx = h_water_in * ppiBase * scale;
+  const waterTopOffsetPx =
+    (tub.H_tub_in - h_water_in) * ppiBase * scale; // from tub top
+  const waterX = tubX;
+  const waterY = tubY + waterTopOffsetPx;
 
-  // Top rectangle of tub (4 corners)
-  const TFL = { x: baseX, y: baseY }; // Top Front Left
-  const TFR = { x: baseX + widthDx, y: baseY + widthDy }; // Top Front Right
-  const TBL = { x: baseX + depthDx, y: baseY + depthDy }; // Top Back Left
-  const TBR = {
-    x: baseX + depthDx + widthDx,
-    y: baseY + depthDy + widthDy
-  }; // Top Back Right
-
-  // Bottom of front and side faces
-  const BFL = { x: TFL.x + heightDx, y: TFL.y + heightDy }; // Bottom Front Left
-  const BFR = { x: TFR.x + heightDx, y: TFR.y + heightDy }; // Bottom Front Right
-  const BBL = { x: TBL.x + heightDx, y: TBL.y + heightDy }; // Bottom Back Left
-  const BBR = { x: TBR.x + heightDx, y: TBR.y + heightDy }; // Bottom Back Right
-
-  // Deflection intensities: vessel (bottom/walls) vs frame (extrusions)
+  // Colors: compare vessel vs frame deflection
   const eps = 1e-9;
   const maxDef = Math.max(bottom.delta_max, extr.delta_max, eps);
 
   const vesselIntensity = bottom.delta_max / maxDef;
   const frameIntensity = extr.delta_max / maxDef;
 
-  const faceColor = (i: number) => {
+  const colorFromIntensity = (i: number) => {
     const clamped = Math.max(0, Math.min(1, i));
     const r = 255;
     const g = Math.round(220 * (1 - clamped));
     const b = Math.round(220 * (1 - clamped));
-    return `rgb(${r},${g},${b})`; // light pink → strong red
+    return `rgb(${r},${g},${b})`; // pink → red
   };
 
-  const vesselColor = faceColor(vesselIntensity);
-  const frameColor = faceColor(frameIntensity);
+  const vesselColor = colorFromIntensity(vesselIntensity);
+  const frameColor = colorFromIntensity(frameIntensity);
 
-  // Helper to make string for polygon
-  const poly = (pts: { x: number; y: number }[]) =>
-    pts.map((p) => `${p.x},${p.y}`).join(" ");
+  // Skimmer: we’ll approximate it on the right wall, near water surface
+  const skimmerWidthIn = 8; // inches
+  const skimmerHeightIn = 6;
+  const skWpx = skimmerWidthIn * ppiBase * scale;
+  const skHpx = skimmerHeightIn * ppiBase * scale;
 
-  // For visual clarity: we will color
-  // - front & side faces based on vessel deflection (MDF walls/bottom)
-  // - a “frame band” at the bottom edge based on frame deflection
-  const frontFace = [TFL, TFR, BFR, BFL];
-  const sideFace = [TFR, TBR, BBR, BFR];
-  const topFace = [TBL, TBR, TFR, TFL];
+  const skimmerX =
+    tubX + Lpx - skWpx - 4; // a little left from inner right face
+  const skimmerY = waterY + 4; // just below water surface
 
-  // Frame band approximated as a strip just below the tub bottom (front edge)
-  const frameBandHeight = 10;
-  const FBL = { x: BFL.x, y: BFL.y + frameBandHeight };
-  const FBR = { x: BFR.x, y: BFR.y + frameBandHeight };
-  const frameBandFront = [BFL, BFR, FBR, FBL];
+  // Frame band: outer frame below tub bottom
+  const frameBandHeightPx = 12;
+  const frameBandX = tubX;
+  const frameBandY = tubY + Hpx;
+  const frameBandWidth = Lpx;
 
-  // Position for labels
-  const labelVesselX = baseX + widthDx + 60;
-  const labelVesselY = baseY + 40;
-  const labelFrameX = baseX + widthDx + 60;
-  const labelFrameY = baseY + 80;
+  // Location of max bottom deflection ~ mid-span in length, at bottom
+  const midX = tubX + Lpx / 2;
+  const midY = tubY + Hpx - 4;
 
   return (
-    <svg width={width} height={height}>
-      {/* Top face outline for context (light) */}
-      <polygon
-        points={poly(topFace)}
+    <svg width={svgWidth} height={svgHeight}>
+      {/* Tub outer outline */}
+      <rect
+        x={tubX}
+        y={tubY}
+        width={Lpx}
+        height={Hpx}
         fill="none"
-        stroke="#888"
+        stroke="#333"
+        strokeWidth={2}
+      />
+
+      {/* Vessel interior (walls + bottom) tinted by vessel deflection */}
+      <rect
+        x={tubX + 2}
+        y={tubY + 2}
+        width={Lpx - 4}
+        height={Hpx - 4}
+        fill={vesselColor}
+        stroke="none"
+      />
+
+      {/* Water inside tub */}
+      <rect
+        x={waterX + 4}
+        y={waterY}
+        width={Lpx - 8}
+        height={waterDepthPx - 4}
+        fill="rgba(120, 170, 255, 0.8)"
+        stroke="#175a9e"
         strokeWidth={1}
       />
 
-      {/* Side face (vessel) */}
-      <polygon
-        points={poly(sideFace)}
-        fill={vesselColor}
-        stroke="#333"
+      {/* Water surface line */}
+      <line
+        x1={waterX + 4}
+        y1={waterY}
+        x2={waterX + Lpx - 4}
+        y2={waterY}
+        stroke="#0f3f7a"
         strokeWidth={1.5}
       />
 
-      {/* Front face (vessel) */}
-      <polygon
-        points={poly(frontFace)}
-        fill={vesselColor}
-        stroke="#333"
-        strokeWidth={1.5}
-      />
-
-      {/* Frame band at bottom front (frame deflection) */}
-      <polygon
-        points={poly(frameBandFront)}
-        fill={frameColor}
-        stroke="#333"
+      {/* Skimmer box on the right wall */}
+      <rect
+        x={skimmerX}
+        y={skimmerY}
+        width={skWpx}
+        height={skHpx}
+        fill="#dddddd"
+        stroke="#555"
         strokeWidth={1}
+        rx={2}
       />
-
-      {/* Max bottom deflection marker (center-ish of box bottom) */}
-      <circle
-        cx={(BFL.x + BFR.x + BBL.x + BBR.x) / 4}
-        cy={(BFL.y + BFR.y + BBL.y + BBR.y) / 4}
-        r={6}
-        fill="blue"
+      <line
+        x1={skimmerX}
+        y1={skimmerY + skHpx / 2}
+        x2={skimmerX + skWpx}
+        y2={skimmerY + skHpx / 2}
+        stroke="#aaa"
+        strokeWidth={1}
       />
       <text
-        x={(BFL.x + BFR.x + BBL.x + BBR.x) / 4 + 8}
-        y={(BFL.y + BFR.y + BBL.y + BBR.y) / 4 + 4}
-        fontSize={11}
-        fill="blue"
+        x={skimmerX + skWpx / 2}
+        y={skimmerY + skHpx + 12}
+        fontSize={10}
+        textAnchor="middle"
+        fill="#444"
       >
-        vessel max δ
+        skimmer
       </text>
 
-      {/* Simple legend */}
+      {/* Frame band below tub representing frame deflection */}
       <rect
-        x={labelVesselX}
-        y={labelVesselY - 10}
-        width={18}
+        x={frameBandX}
+        y={frameBandY}
+        width={frameBandWidth}
+        height={frameBandHeightPx}
+        fill={frameColor}
+        stroke="#333"
+        strokeWidth={1}
+      />
+      <text
+        x={frameBandX + frameBandWidth / 2}
+        y={frameBandY + frameBandHeightPx + 12}
+        fontSize={10}
+        textAnchor="middle"
+        fill="#444"
+      >
+        frame / extrusion region
+      </text>
+
+      {/* Marker for max bottom deflection */}
+      <circle cx={midX} cy={midY} r={5} fill="blue" />
+      <text
+        x={midX}
+        y={midY - 8}
+        fontSize={10}
+        textAnchor="middle"
+        fill="blue"
+      >
+        max δ (bottom)
+      </text>
+
+      {/* Legend on the right */}
+      <rect
+        x={svgWidth - margin - 20}
+        y={margin}
+        width={16}
         height={12}
         fill={vesselColor}
         stroke="#333"
         strokeWidth={0.5}
       />
-      <text x={labelVesselX + 24} y={labelVesselY} fontSize={11} fill="#222">
-        Vessel deflection: {bottom.delta_max.toFixed(5)} in
+      <text
+        x={svgWidth - margin - 26}
+        y={margin + 10}
+        fontSize={10}
+        textAnchor="end"
+        fill="#222"
+      >
+        vessel deflection: {bottom.delta_max.toFixed(5)} in
       </text>
 
       <rect
-        x={labelFrameX}
-        y={labelFrameY - 10}
-        width={18}
+        x={svgWidth - margin - 20}
+        y={margin + 24}
+        width={16}
         height={12}
         fill={frameColor}
         stroke="#333"
         strokeWidth={0.5}
       />
-      <text x={labelFrameX + 24} y={labelFrameY} fontSize={11} fill="#222">
-        Frame deflection: {extr.delta_max.toFixed(5)} in
+      <text
+        x={svgWidth - margin - 26}
+        y={margin + 34}
+        fontSize={10}
+        textAnchor="end"
+        fill="#222"
+      >
+        frame deflection: {extr.delta_max.toFixed(5)} in
       </text>
 
       <text
         x={margin}
-        y={height - margin}
+        y={svgHeight - margin / 2}
         fontSize={11}
         fill="#555"
       >
-        Color intensity shows relative deflection: redder = larger. Front & side faces = vessel, bottom band = frame.
+        Side section: length (horizontal) vs depth (vertical). Redder walls/bottom = more vessel
+        deflection; redder band = more frame deflection. Water and skimmer are schematic.
       </text>
     </svg>
   );
