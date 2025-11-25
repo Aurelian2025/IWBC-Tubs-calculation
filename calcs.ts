@@ -37,12 +37,15 @@ export type FrameGeometry = {
 
 // approximate Poisson's ratio for MDF
 const POISSON_MDF = 0.30;
+// approximate coefficient for max deflection of simply supported plate, uniform load
+const PLATE_DEFLECTION_COEFF = 0.004; // dimensionless
 
 // Flexural rigidity of a plate: D = E t^3 / [12 (1 - ν^2)]
 function plateFlexuralRigidity(
   E_psi: number,
   t_in: number,
   nu: number = POISSON_MDF
+  
 ) {
   return (E_psi * Math.pow(t_in, 3)) / (12 * (1 - nu * nu));
 }
@@ -121,7 +124,9 @@ export function mdfBottomDeflection(
 
   // Max deflection of a simply supported rectangular plate under uniform load:
   // w_max ≈ q * a^4 / (64 * D)
-  const delta_max = (q_bottom * Math.pow(a, 4)) / (64 * D);
+  const delta_max =
+  PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D;
+
 
   // For stress, approximate plate as a beam spanning along the short side a
   // line load w_line = q_bottom * b (lb/in)
@@ -219,7 +224,9 @@ export function bottomDeflectionProfile(
 
   // Max deflection from plate theory (simply supported, uniform load)
   // w_max ≈ q * a^4 / (64 * D)
-  const w_max = (q_bottom * Math.pow(a, 4)) / (64 * D);
+  const w_max =
+  PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D;
+
 
   // We sample deflection along the tub length (L direction)
   const L_len = tub.L_tub_in;
@@ -273,7 +280,9 @@ export function shortSideDeflectionProfile(
 
   // Max deflection of a simply supported rectangular plate under uniform load:
   // w_max ≈ q * a^4 / (64 * D)
-  const w_max = (q_side * Math.pow(a, 4)) / (64 * D);
+  const w_max =
+  PLATE_DEFLECTION_COEFF * (q_side * Math.pow(a, 4)) / D;
+
 
   // We sample deflection along the width b, from 0 to b
   const n = nPoints < 2 ? 2 : nPoints;
@@ -326,7 +335,9 @@ export function longSideDeflectionProfile(
 
   // Max deflection of a simply supported rectangular plate under uniform load:
   // w_max ≈ q * a^4 / (64 * D)
-  const w_max = (q_side * Math.pow(a, 4)) / (64 * D);
+  const w_max =
+  PLATE_DEFLECTION_COEFF * (q_side * Math.pow(a, 4)) / D;
+
 
   // We sample deflection along the length b, from 0 to b
   const n = nPoints < 2 ? 2 : nPoints;
