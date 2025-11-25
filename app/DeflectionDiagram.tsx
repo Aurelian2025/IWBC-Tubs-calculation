@@ -102,15 +102,17 @@ export default function DeflectionDiagram({
   const iBBL = { x: BBL.x + wallOffset, y: BBL.y - wallOffset };
   const iBBR = { x: BBR.x - wallOffset, y: BBR.y - wallOffset };
 
-  // Water
-  const hWaterIn = tub.H_tub_in - tub.water_freeboard_in;
-  const waterFrac = Math.max(0, Math.min(1, hWaterIn / tub.H_tub_in));
-  const waterDropPx = Hpx * waterFrac;
+  // water_freeboard_in is actually water depth from bottom
+const hWaterIn = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+const waterFrac = Math.max(0, Math.min(1, hWaterIn / tub.H_tub_in));
+// distance from top to water surface
+const freeboardPx = Hpx * (1 - waterFrac);
 
-  const wIFTL = { x: iFTL.x, y: iFTL.y + waterDropPx };
-  const wIFTR = { x: iFTR.x, y: iFTR.y + waterDropPx };
-  const wIBTL = { x: iBTL.x, y: iBTL.y + waterDropPx };
-  const wIBTR = { x: iBTR.x, y: iBTR.y + waterDropPx };
+const wIFTL = { x: iFTL.x, y: iFTL.y + freeboardPx };
+const wIFTR = { x: iFTR.x, y: iFTR.y + freeboardPx };
+const wIBTL = { x: iBTL.x, y: iBTL.y + freeboardPx };
+const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
+
 
   // Vessel/frame colors from max δ
   const eps = 1e-9;
