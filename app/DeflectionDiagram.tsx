@@ -147,15 +147,7 @@ export default function DeflectionDiagram({
     y: (iFBL.y + iFBR.y + iBBL.y + iBBR.y) / 4
   };
 
-  // Skimmer on inside of right wall, near water level (front-right inner)
-  const skWidthIn = 8;
-  const skHeightIn = 6;
-  const skWpx = skWidthIn * pxPerInLength * scale;
-  const skHpx = skHeightIn * pxPerInHeight * scale;
-
-  const skX = wIFTR.x - skWpx - 2;
-  const skY = wIFTR.y - skHpx / 2;
-
+  
   return (
     <svg width={svgWidth} height={svgHeight}>
       {/* Thin outline for top */}
@@ -224,35 +216,7 @@ export default function DeflectionDiagram({
         stroke="none"
       />
 
-      {/* Skimmer on inner right wall */}
-      <rect
-        x={skX}
-        y={skY}
-        width={skWpx}
-        height={skHpx}
-        fill="#eeeeee"
-        stroke="#555"
-        strokeWidth={1}
-        rx={2}
-      />
-      <line
-        x1={skX + 3}
-        y1={skY + skHpx / 2}
-        x2={skX + skWpx - 3}
-        y2={skY + skHpx / 2}
-        stroke="#bbbbbb"
-        strokeWidth={1}
-      />
-      <text
-        x={skX + skWpx / 2}
-        y={skY + skHpx + 11}
-        fontSize={10}
-        textAnchor="middle"
-        fill="#444"
-      >
-        skimmer
-      </text>
-
+      
       {/* Frame band under front bottom (frame deflection) */}
       <polygon
         points={poly(frameBand)}
@@ -320,15 +284,7 @@ export default function DeflectionDiagram({
         frame deflection: {frameDefMm.toFixed(3)} mm
       </text>
 
-      <text
-        x={margin}
-        y={svgHeight - margin / 2}
-        fontSize={11}
-        fill="#555"
-      >
-        3D-like view of tub interior with water & skimmer. Redder walls/bottom = higher vessel
-        deflection; redder band = higher frame deflection. Values displayed in mm.
-      </text>
+    
     </svg>
   );
 }
