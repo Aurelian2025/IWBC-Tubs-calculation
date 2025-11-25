@@ -147,10 +147,11 @@ const longProfile = longSideDeflectionProfile(tub, materials, 10);
             onChange={(v) => setTub({ ...tub, t_mdf_side_in: v })}
           />
           <LabelInput
-            label="Water Depth (in)"
-            value={tub.water_Freeboard_in}
-            onChange={(v) => setTub({ ...tub, water_Freeboard_in: v })}
-          />
+  label="Water Depth (in)"
+  value={tub.water_freeboard_in}
+  onChange={(v) => setTub({ ...tub, water_freeboard_in: v })}
+/>
+
           <LabelInput
             label="# of Transverse Extrusions"
             value={tub.n_transverse}
