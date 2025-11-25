@@ -1,0 +1,15 @@
+{
+  "materials": {
+    "water": {
+      "gamma_psi_per_in": 0.0361
+    },
+    "mdf_extira": {
+      "E_psi": 600000
+    },
+    "aluminum_2525": {
+      "E_psi": 10000000,
+      "I_in4": 0.2,
+      "c_in": 0.5
+    }
+  }
+}
