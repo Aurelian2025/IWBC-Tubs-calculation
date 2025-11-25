@@ -19,19 +19,32 @@ type ExtrResult = {
   sigma_max: number;
 };
 
+type DeflectionPoint = {
+  x_in: number;
+  deflection_in: number;
+};
+
 const INCH_TO_MM = 25.4;
 
 export default function DeflectionDiagram({
   tub,
   frame,
   bottom,
-  extr
+  extr,
+  bottomProfile,
+  shortProfile,
+  longProfile
 }: {
   tub: TubGeometry;
   frame: FrameGeometry;
   bottom: BottomResult;
   extr: ExtrResult;
+  bottomProfile: DeflectionPoint[];
+  shortProfile: DeflectionPoint[];
+  longProfile: DeflectionPoint[];
 }) {
+  // ... keep your existing 3D drawing code here ...
+
   const svgWidth = 720;
   const svgHeight = 420;
   const margin = 40;
@@ -123,7 +136,36 @@ export default function DeflectionDiagram({
   // Deflection in mm for display
   const vesselDefMm = bottom.delta_max * INCH_TO_MM;
   const frameDefMm = extr.delta_max * INCH_TO_MM;
+ // Build legend lines for all points in mm
+const legendLines: string[] = [];
 
+legendLines.push(`σ_vessel_max: ${bottom.sigma_max.toFixed(1)} psi`);
+legendLines.push(`σ_frame_max: ${extr.sigma_max.toFixed(1)} psi`);
+legendLines.push("");
+
+legendLines.push("Bottom deflection (mm):");
+bottomProfile.forEach((p, i) => {
+  const mm = p.deflection_in * INCH_TO_MM;
+  legendLines.push(`B${i + 1} @ ${p.x_in.toFixed(1)} in: ${mm.toFixed(2)}`);
+});
+
+legendLines.push("");
+legendLines.push("Short-side deflection (mm):");
+shortProfile.forEach((p, i) => {
+  const mm = p.deflection_in * INCH_TO_MM;
+  legendLines.push(`S${i + 1} @ ${p.x_in.toFixed(1)} in: ${mm.toFixed(2)}`);
+});
+
+legendLines.push("");
+legendLines.push("Long-side deflection (mm):");
+longProfile.forEach((p, i) => {
+  const mm = p.deflection_in * INCH_TO_MM;
+  legendLines.push(`L${i + 1} @ ${p.x_in.toFixed(1)} in: ${mm.toFixed(2)}`);
+});
+
+const legendX = svgWidth - margin - 10;
+const legendY = margin + 10;
+const lineHeight = 12;
   const poly = (pts: { x: number; y: number }[]) =>
     pts.map((p) => `${p.x},${p.y}`).join(" ");
 
@@ -147,7 +189,7 @@ export default function DeflectionDiagram({
     y: (iFBL.y + iFBR.y + iBBL.y + iBBR.y) / 4
   };
 
-  
+ 
   return (
     <svg width={svgWidth} height={svgHeight}>
       {/* Thin outline for top */}
