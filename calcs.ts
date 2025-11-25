@@ -47,6 +47,19 @@ export function beamDeflectionUniform(
   const delta_max = (5 * w * Math.pow(L, 4)) / (384 * E * I);
   return { M_max, delta_max };
 }
+// Deflection shape for a simply supported beam with uniform load
+// x from 0 to L
+export function beamDeflectionUniformAt(
+  L: number,
+  w: number,
+  E: number,
+  I: number,
+  x: number
+): number {
+  // v(x) = w x (L^3 - 2 L x^2 + x^3) / (24 E I)
+  return (w * x * (Math.pow(L, 3) - 2 * L * Math.pow(x, 2) + Math.pow(x, 3))) /
+    (24 * E * I);
+}
 
 // -------------------------
 // Load Calculations
@@ -148,4 +161,138 @@ export function extrusionDeflection(
     delta_max,
     sigma_max
   };
+}
+
+// -------------------------
+// Bottom deflection profile (10 points)
+// -------------------------
+
+export function bottomDeflectionProfile(
+  tub: TubGeometry,
+  materials: MaterialsConfig,
+  nPoints: number = 10
+): { x_in: number; deflection_in: number }[] {
+  const L = tub.L_tub_in; // span along tub length (front to back)
+
+  // approximate uniform load from water: average pressure * width
+  const h_water = tub.H_tub_in - tub.water_freeboard_in;
+  const gamma = materials.water.gamma_psi_per_in;
+  const p_avg = gamma * (h_water / 2); // psi (average hydrostatic)
+  const w = p_avg * tub.W_tub_in;      // lb/in along length
+
+  const b = tub.W_tub_in;              // width of bottom plate (in)
+  const t = tub.t_mdf_bottom_in;       // thickness (in)
+  const I = (b * Math.pow(t, 3)) / 12; // in^4
+  const E = materials.mdf_extira.E_psi;
+
+  const result: { x_in: number; deflection_in: number }[] = [];
+
+  if (nPoints <= 1) {
+    const mid = L / 2;
+    result.push({
+      x_in: mid,
+      deflection_in: beamDeflectionUniformAt(L, w, E, I, mid)
+    });
+    return result;
+  }
+
+  const dx = L / (nPoints - 1);
+
+  for (let i = 0; i < nPoints; i++) {
+    const x = i * dx;
+    const v = beamDeflectionUniformAt(L, w, E, I, x);
+    result.push({ x_in: x, deflection_in: v });
+  }
+
+  return result;
+}
+// -------------------------
+// Short-side wall deflection profile (5 points)
+// Treat each short side as a beam along tub width
+// -------------------------
+
+export function shortSideDeflectionProfile(
+  tub: TubGeometry,
+  materials: MaterialsConfig,
+  nPoints: number = 5
+): { x_in: number; deflection_in: number }[] {
+  const L = tub.W_tub_in; // span along width (short side length)
+
+  const h_water = tub.H_tub_in - tub.water_freeboard_in;
+  const gamma = materials.water.gamma_psi_per_in;
+  const p_avg = gamma * (h_water / 2); // psi
+
+  // lateral load per unit length on the wall: p_avg * wall height
+  const w = p_avg * tub.H_tub_in; // lb/in along width
+
+  const t = tub.t_mdf_side_in;         // thickness of side wall (in)
+  const H = tub.H_tub_in;              // wall height (in)
+  const I = (H * Math.pow(t, 3)) / 12; // in^4
+  const E = materials.mdf_extira.E_psi;
+
+  const result: { x_in: number; deflection_in: number }[] = [];
+
+  if (nPoints <= 1) {
+    const mid = L / 2;
+    result.push({
+      x_in: mid,
+      deflection_in: beamDeflectionUniformAt(L, w, E, I, mid)
+    });
+    return result;
+  }
+
+  const dx = L / (nPoints - 1);
+
+  for (let i = 0; i < nPoints; i++) {
+    const x = i * dx;
+    const v = beamDeflectionUniformAt(L, w, E, I, x);
+    result.push({ x_in: x, deflection_in: v });
+  }
+
+  return result;
+}
+// -------------------------
+// Long-side wall deflection profile (10 points)
+// Treat each long side as a beam along tub length
+// -------------------------
+
+export function longSideDeflectionProfile(
+  tub: TubGeometry,
+  materials: MaterialsConfig,
+  nPoints: number = 10
+): { x_in: number; deflection_in: number }[] {
+  const L = tub.L_tub_in; // span along length (long side length)
+
+  const h_water = tub.H_tub_in - tub.water_freeboard_in;
+  const gamma = materials.water.gamma_psi_per_in;
+  const p_avg = gamma * (h_water / 2); // psi
+
+  // lateral load per unit length on the wall: p_avg * wall height
+  const w = p_avg * tub.H_tub_in; // lb/in along length
+
+  const t = tub.t_mdf_side_in;         // thickness of side wall (in)
+  const H = tub.H_tub_in;              // wall height (in)
+  const I = (H * Math.pow(t, 3)) / 12; // in^4
+  const E = materials.mdf_extira.E_psi;
+
+  const result: { x_in: number; deflection_in: number }[] = [];
+
+  if (nPoints <= 1) {
+    const mid = L / 2;
+    result.push({
+      x_in: mid,
+      deflection_in: beamDeflectionUniformAt(L, w, E, I, mid)
+    });
+    return result;
+  }
+
+  const dx = L / (nPoints - 1);
+
+  for (let i = 0; i < nPoints; i++) {
+    const x = i * dx;
+    const v = beamDeflectionUniformAt(L, w, E, I, x);
+    result.push({ x_in: x, deflection_in: v });
+  }
+
+  return result;
 }
