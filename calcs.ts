@@ -114,4 +114,38 @@ export function extrusionDeflection(
   // convert extrusion size to inches
   const extrSizeIn = frame.extr_size_mm / 25.4;
 
-  // clear span of each extr
+    // clear span of each extrusion
+  const L = frame.W_frame_in - 2 * extrSizeIn;
+
+  // tributary length on each extrusion
+  const trib_L = tub.L_tub_in / tub.n_transverse;
+
+  const h_water = tub.H_tub_in - tub.water_freeboard_in;
+  const gamma = materials.water.gamma_psi_per_in;
+
+  // average hydrostatic pressure along depth
+  const p_avg = gamma * (h_water / 2); // psi
+
+  const area = trib_L * tub.W_tub_in;  // in^2
+  const total_load = p_avg * area;     // lb
+
+  const w = total_load / L;            // lb/in
+
+  const { M_max, delta_max } = beamDeflectionUniform(
+    L,
+    w,
+    materials.aluminum_2525.E_psi,
+    materials.aluminum_2525.I_in4
+  );
+
+  const sigma_max =
+    (M_max * materials.aluminum_2525.c_in) / materials.aluminum_2525.I_in4;
+
+  return {
+    span: L,
+    w,
+    M_max,
+    delta_max,
+    sigma_max
+  };
+}
