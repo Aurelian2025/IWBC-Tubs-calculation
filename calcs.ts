@@ -243,19 +243,6 @@ export function bottomDeflectionProfile(
 }
 
 
-  const dx_total = L_total / (nPoints - 1);
-
-  for (let i = 0; i < nPoints; i++) {
-    const x_global = i * dx_total;
-    const x_local = x_global % L_span; // position within a span
-    const v = beamDeflectionUniformAt(L_span, w, E, I, x_local);
-    result.push({ x_in: x_global, deflection_in: v });
-  }
-
-  return result;
-}
-
-
 // -------------------------
 // Short-side wall deflection profile (5 points)
 // Right wall treated as 2 spans (1 post in the middle)
