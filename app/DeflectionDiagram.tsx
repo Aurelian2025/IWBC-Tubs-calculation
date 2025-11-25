@@ -222,11 +222,11 @@ export default function DeflectionDiagram({
   const legendY = margin + 130;
   const lineHeight = 12;
 
-  // Short-side side-view panel (right): 2D height vs width
-  const sidePanelX = svgWidth - rightPanelWidth + 10;
-  const sidePanelY = margin;
+    // Place short-side panel centered below the main tub
   const sidePanelW = rightPanelWidth - 30;
   const sidePanelH = 180;
+  const sidePanelX = baseX + Lpx / 2 - sidePanelW / 2; // centered under tub
+  const sidePanelY = baseY + Hpx + 60;                 // below tub
 
   const sideMaxW = sidePanelW - 40;
   const sideMaxH = sidePanelH - 40;
@@ -416,7 +416,7 @@ export default function DeflectionDiagram({
       })}
 
       {/* RIGHT SIDE: Short-side 2D view */}
-      {/* Panel frame */}
+           {/* Panel frame */}
       <rect
         x={sidePanelX}
         y={sidePanelY}
@@ -433,19 +433,48 @@ export default function DeflectionDiagram({
         textAnchor="middle"
         fill="#333"
       >
-        Short-side view (right wall)
+        Short-side view (right wall, 3D)
       </text>
 
-      {/* Short-side wall rectangle */}
+      {/* 3D-ish short-side wall: front face + top depth */}
+      {/* front face */}
       <rect
         x={sideTopLeft.x}
         y={sideTopLeft.y}
         width={sideWpx}
         height={sideHpx}
-        fill="none"
+        fill="rgba(255, 220, 220, 0.7)"
         stroke="#333"
         strokeWidth={1}
       />
+
+      {/* top face (simple depth) */}
+      {(() => {
+        const depth = 12; // px depth for 3D effect
+        const tTL = { x: sideTopLeft.x, y: sideTopLeft.y };
+        const tTR = { x: sideTopRight.x, y: sideTopRight.y };
+        const tBL = { x: sideTopLeft.x + depth, y: sideTopLeft.y - depth };
+        const tBR = { x: sideTopRight.x + depth, y: sideTopRight.y - depth };
+        return (
+          <>
+            <polygon
+              points={`${tTL.x},${tTL.y} ${tTR.x},${tTR.y} ${tBR.x},${tBR.y} ${tBL.x},${tBL.y}`}
+              fill="rgba(255, 235, 235, 0.9)"
+              stroke="#666"
+              strokeWidth={1}
+            />
+            {/* back edge */}
+            <line
+              x1={tBL.x}
+              y1={tBL.y}
+              x2={tBR.x}
+              y2={tBR.y}
+              stroke="#666"
+              strokeWidth={1}
+            />
+          </>
+        );
+      })()}
 
       {/* Water level line in side view */}
       <line
