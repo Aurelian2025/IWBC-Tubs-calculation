@@ -1,6 +1,5 @@
 // calcs.ts
 // Core deflection formulas and calculation logic
-// Loaded by Next.js page and fed with JSON config values
 
 // -------------------------
 // Type Definitions
@@ -30,7 +29,7 @@ export type FrameGeometry = {
   W_frame_in: number;
   H_frame_in: number;
 
-  extr_size_mm: number; // user input in mm
+  extr_size_mm: number; // size of the 2525 extrusion side, in mm
 };
 
 // -------------------------
@@ -39,10 +38,10 @@ export type FrameGeometry = {
 
 // Simply supported beam under uniform load
 export function beamDeflectionUniform(
-  L: number,       // span (in)
-  w: number,       // uniform load (lb/in)
-  E: number,       // modulus (psi)
-  I: number        // moment of inertia (in^4)
+  L: number, // span (in)
+  w: number, // uniform load (lb/in)
+  E: number, // modulus (psi)
+  I: number  // moment of inertia (in^4)
 ) {
   const M_max = (w * L * L) / 8;
   const delta_max = (5 * w * Math.pow(L, 4)) / (384 * E * I);
@@ -61,7 +60,8 @@ export function uniformLoadBottomStrip(
   const h_water = tub.H_tub_in - tub.water_freeboard_in; // in
   const gamma = materials.water.gamma_psi_per_in;
 
-  const p_mid = gamma * (h_water / 2); // psi average depth
+  // approximate average pressure over depth
+  const p_mid = gamma * (h_water / 2); // psi
   const b_strip = 1.0;                 // 1-inch wide strip
 
   const w = p_mid * b_strip;           // lb/in
@@ -76,13 +76,14 @@ export function mdfBottomDeflection(
   tub: TubGeometry,
   materials: MaterialsConfig
 ) {
-  const span = tub.L_tub_in / (tub.n_transverse - 1); // distance between extrusions
+  // distance between transverse extrusions
+  const span = tub.L_tub_in / (tub.n_transverse - 1);
   const w_strip = uniformLoadBottomStrip(tub, materials);
 
-  const b = tub.W_tub_in;             // width of bottom plate acting as beam (in)
-  const t = tub.t_mdf_bottom_in;      // thickness (in)
+  const b = tub.W_tub_in;        // width of bottom plate acting as a beam (in)
+  const t = tub.t_mdf_bottom_in; // thickness (in)
 
-  const I = (b * Math.pow(t, 3)) / 12; // moment of inertia
+  const I = (b * Math.pow(t, 3)) / 12; // in^4
   const c = t / 2;
 
   const { M_max, delta_max } = beamDeflectionUniform(
@@ -109,19 +110,4 @@ export function mdfBottomDeflection(
 
 export function extrusionDeflection(
   tub: TubGeometry,
-  frame: FrameGeometry,
-  materials: MaterialsConfig
-) {
-  // Convert extrusion size mm → inches
-  const extrSizeIn = frame.extr_size_mm / 25.4;
-
-  // Clear span between frame rails
-  const L = frame.W_frame_in - 2 * extrSizeIn;
-
-  // Tributary area per extrusion
-  const trib_L = tub.L_tub_in / tub.n_transverse;
-
-  const h_water = tub.H_tub_in - tub.water_freeboard_in;
-  const gamma = materials.water.gamma_psi_per_in;
-
-  const p_avg = gamm_
+  frame
