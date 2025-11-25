@@ -4,6 +4,7 @@ import React, { useState } from "react";
 
 import tubDefaults from "../defaultTub.json";
 import materialDefaults from "../materials.json";
+import Tub3D from "./Tub3D";
 
 import {
   TubGeometry,
@@ -193,6 +194,13 @@ const longProfile = longSideDeflectionProfile(tub, materials, 10);
   frame={frame}
   bottom={bottom}
   extr={extr}
+  bottomProfile={bottomProfile}
+  shortProfile={shortProfile}
+  longProfile={longProfile}
+/>
+<h2 style={{ marginTop: "2rem" }}>3D Interactive View</h2>
+<Tub3D
+  tub={tub}
   bottomProfile={bottomProfile}
   shortProfile={shortProfile}
   longProfile={longProfile}
