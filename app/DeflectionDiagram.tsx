@@ -356,39 +356,7 @@ export default function DeflectionDiagram({
         );
       })}
 
-      {/* Long-side points (blue) */}
-      {longPointsSvg.map((p, idx) => {
-        const mm = p.deflection_in * INCH_TO_MM;
-        const r = radiusFromDeflection(p.deflection_in);
-        const label = `L${idx + 1}`;
-        return (
-          <g key={`l-${idx}`}>
-            <circle
-              cx={p.svg.x}
-              cy={p.svg.y}
-              r={r}
-              fill="rgba(0,0,220,0.8)"
-              stroke="#000066"
-              strokeWidth={1}
-            >
-              <title>
-                {`Long ${label}: x=${p.x_in.toFixed(1)} in, δ=${mm.toFixed(
-                  3
-                )} mm`}
-              </title>
-            </circle>
-            <text
-              x={p.svg.x + r + 2}
-              y={p.svg.y + 3}
-              fontSize={9}
-              fill="#000066"
-            >
-              {label}
-            </text>
-          </g>
-        );
-      })}
-
+      
       {/* Short-side points still faintly in main view (optional) */}
       {shortPointsSvg.map((p, idx) => {
         const r = radiusFromDeflection(p.deflection_in);
