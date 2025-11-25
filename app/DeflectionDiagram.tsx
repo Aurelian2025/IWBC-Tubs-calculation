@@ -359,32 +359,7 @@ const wIBTR = { x: iBTR.x, y: iBTR.y + freeboardPx };
       })}
 
       
-      {/* Short-side points still faintly in main view (optional) */}
-      {shortPointsSvg.map((p, idx) => {
-        const r = radiusFromDeflection(p.deflection_in);
-        const label = `S${idx + 1}`;
-        return (
-          <g key={`s-main-${idx}`}>
-            <circle
-              cx={p.svg.x}
-              cy={p.svg.y}
-              r={r * 0.7}
-              fill="rgba(0,180,0,0.4)"
-              stroke="#004400"
-              strokeWidth={0.8}
-            />
-            <text
-              x={p.svg.x + r * 0.7 + 1}
-              y={p.svg.y + 3}
-              fontSize={8}
-              fill="#004400"
-            >
-              {label}
-            </text>
-          </g>
-        );
-      })}
-
+      
       {/* RIGHT SIDE: Short-side 2D view */}
            {/* Panel frame */}
       <rect
