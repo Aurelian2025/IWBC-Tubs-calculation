@@ -182,6 +182,18 @@ const longProfile = longSideDeflectionProfile(tub, materials, 11);
             value={tub.n_transverse}
             onChange={(v) => setTub({ ...tub, n_transverse: v })}
           />
+<LabelInput
+  label="# Posts on Long Sides"
+  value={tub.n_long_side_posts}
+  onChange={(v) => setTub({ ...tub, n_long_side_posts: v })}
+/>
+
+<LabelInput
+  label="# Posts on Short Sides"
+  value={tub.n_short_side_posts}
+  onChange={(v) => setTub({ ...tub, n_short_side_posts: v })}
+/>
+
         </div>
 
         <div>
