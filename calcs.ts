@@ -141,37 +141,39 @@ export function mdfBottomDeflection(
   // Uniform pressure on the bottom (psi = lb/in^2)
   const q_bottom = gamma * h_water;
 
-  // Plate dimensions: bottom of the tub
-  const a = Math.min(tub.L_tub_in, tub.W_tub_in); // shorter side (in)
-  const b = Math.max(tub.L_tub_in, tub.W_tub_in); // longer side (in)
+    // Plate dimensions: bottom of the tub, broken into panels by transverse extrusions
+  // Treat n_transverse as the number of supports along the length.
+  const nPanels = Math.max(2, tub.n_transverse);  // at least two supports
+  const panelLen = tub.L_tub_in / (nPanels - 1);  // spacing between extrusions (in)
+
+  // Use the panel span as the "shorter side" of the plate
+  const a = Math.min(panelLen, tub.W_tub_in);     // effective short side (in)
+  const b = Math.max(panelLen, tub.W_tub_in);     // long side (in)
 
   const t = tub.t_mdf_bottom_in;         // thickness (in)
   const E = materials.mdf_extira.E_psi;  // psi
   const D = plateFlexuralRigidity(E, t); // lb·in
 
-  // Max deflection of a simply supported rectangular plate under uniform load:
-  // w_max ≈ q * a^4 / (64 * D)
   const delta_max =
-  PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D;
+    PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D;
 
-
-  // For stress, approximate plate as a beam spanning along the short side a
-  // line load w_line = q_bottom * b (lb/in)
-  const w_line = q_bottom * b;            // lb/in along span a
+  // For stress, approximate as a beam spanning along the short side a,
+  // with tributary width b (one panel)
+  const w_line = q_bottom * b;              // lb/in along span a
   const I_beam = (b * Math.pow(t, 3)) / 12; // in^4
   const c = t / 2;
 
-  // Simply supported beam, uniform load: M_max = wL^2 / 8
   const M_max = (w_line * Math.pow(a, 2)) / 8;
   const sigma_max = (M_max * c) / I_beam;
 
   return {
-    span: a,         // effective span (shorter side)
-    w_strip: w_line, // line load along that span
+    span: a,
+    w_strip: w_line,
     M_max,
     delta_max,
     sigma_max
   };
+
 }
 
 
@@ -243,13 +245,15 @@ export function bottomDeflectionProfile(
   // Uniform pressure on the bottom (psi)
   const q_bottom = gamma * h_water;
 
-  // Plate properties: use same as mdfBottomDeflection
-  const a = Math.min(tub.L_tub_in, tub.W_tub_in); // shorter side of plate (in)
+    // Plate properties: panel between bottom extrusions, same as mdfBottomDeflection
+  const nPanels = Math.max(2, tub.n_transverse);
+  const panelLen = tub.L_tub_in / (nPanels - 1);
+  const a = Math.min(panelLen, tub.W_tub_in); // effective short side (in)
+
   const t = tub.t_mdf_bottom_in;                  // thickness (in)
   const E = materials.mdf_extira.E_psi;           // psi
   const D = plateFlexuralRigidity(E, t);          // lb·in
 
-  // Max deflection from plate theory (simply supported, uniform load)
   const w_max =
     PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D;
 
