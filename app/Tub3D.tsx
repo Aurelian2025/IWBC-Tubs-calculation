@@ -111,7 +111,7 @@ export default function Tub3D({
   });
 
   const sprite = new THREE.Sprite(material);
-  sprite.scale.set(0.35, 0.15, 1); // world size
+  sprite.scale.set(0.7, 0.3, 1);
   return sprite;
 }
 
@@ -262,6 +262,7 @@ tubGroup.add(label);
     };
 
     const onWheel = (event: WheelEvent) => {
+      event.preventDefault(); // stop page from scrolling
       const delta = event.deltaY;
       const zoomFactor = 1.05;
       if (delta > 0) {
@@ -284,7 +285,7 @@ tubGroup.add(label);
     renderer.domElement.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
-    renderer.domElement.addEventListener("wheel", onWheel, { passive: true });
+   renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
 
     let animationFrameId: number;
 
