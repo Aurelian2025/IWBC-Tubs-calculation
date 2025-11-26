@@ -59,8 +59,8 @@ export default function DeflectionDiagram({
   shortProfile: DeflectionPoint[];
   longProfile: DeflectionPoint[];
 }) {
-  const svgWidth = 1000;
-  const svgHeight = 550;
+  const svgWidth = 1200;
+  const svgHeight = 650;
   const margin = 40;
 
   // Base scales for 3D-ish view
