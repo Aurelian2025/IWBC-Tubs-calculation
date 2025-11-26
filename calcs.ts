@@ -316,7 +316,10 @@ export function shortSideDeflectionProfile(
   const b_full = tub.W_tub_in;
 
   // posts divide the width into equal panels
-  const nShort = Math.max(0, tub.n_short_side_posts);
+  // use 0 if the field is missing/undefined so we fall back to old behavior
+  const nShortRaw = tub.n_short_side_posts ?? 0;
+  const nShort = nShortRaw > 0 ? nShortRaw : 0;
+
   const b_panel = b_full / (nShort + 1); // panel width between posts
 
   const t = tub.t_mdf_side_in;
@@ -327,8 +330,10 @@ export function shortSideDeflectionProfile(
   let w_max =
     PLATE_DEFLECTION_COEFF * (q_side * Math.pow(a, 4)) / D;
 
-  // scale deflection by (panel width / full width)^4 → stiffer with more posts
-  w_max *= Math.pow(b_panel / b_full, 4);
+  // if b_full is valid, scale deflection by (panel width / full width)^4 → stiffer with more posts
+  if (b_full > 0) {
+    w_max *= Math.pow(b_panel / b_full, 4);
+  }
 
   const pts = SHORT_SAMPLE_POINTS_5.slice(0, nPoints);
 
@@ -340,7 +345,6 @@ export function shortSideDeflectionProfile(
 
     // physical x-position uses FULL width (for drawing and labeling)
     const x = u * b_full;
-    // const y = v * a;
 
     const shape = Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
     const w = w_max * shape;
