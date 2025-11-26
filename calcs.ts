@@ -361,10 +361,14 @@ export function shortSideDeflectionProfile(
 // 4-edge simply supported plate under average lateral pressure
 // -------------------------
 
+// -------------------------
+// Long-side wall deflection profile (using posts)
+// -------------------------
+
 export function longSideDeflectionProfile(
   tub: TubGeometry,
   materials: MaterialsConfig,
-  nPoints: number = 10
+  nPoints: number = 11
 ): { x_in: number; deflection_in: number }[] {
   const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
   const gamma = materials.water.gamma_psi_per_in;
@@ -372,25 +376,42 @@ export function longSideDeflectionProfile(
   // average lateral pressure on wall
   const q_side = gamma * h_water * 0.5; // psi
 
-  const a = tub.H_tub_in; // shorter side = height
-  const b = tub.L_tub_in; // longer side = length
+  // vertical span (height)
+  const a = tub.H_tub_in;
+
+  // FULL length of the long-side wall
+  const b_full = tub.L_tub_in;
+
+  // posts divide the length into equal panels
+  // if the field is missing, fall back to 0 posts (old behavior)
+  const nLongRaw = tub.n_long_side_posts ?? 0;
+  const nLong = nLongRaw > 0 ? nLongRaw : 0;
+
+  const b_panel = b_full / (nLong + 1); // panel length between posts
+
   const t = tub.t_mdf_side_in;
   const E = materials.mdf_extira.E_psi;
   const D = plateFlexuralRigidity(E, t);
 
-  const w_max =
+  // base plate deflection using full height
+  let w_max =
     PLATE_DEFLECTION_COEFF * (q_side * Math.pow(a, 4)) / D;
+
+  // scale deflection by (panel length / full length)^4 → more posts = stiffer
+  if (b_full > 0) {
+    w_max *= Math.pow(b_panel / b_full, 4);
+  }
 
   const pts = PLATE_SAMPLE_POINTS.slice(0, nPoints);
 
   const result: { x_in: number; deflection_in: number }[] = [];
 
   for (const p of pts) {
-    const u = p.u; // 0..1 along length b
-    const v = p.v; // 0..1 along height a
+    const u = p.u; // 0..1 along FULL length
+    const v = p.v; // 0..1 along height
 
-    const x = u * b;
-    // const y = v * a;
+    // physical x-position uses FULL length (for drawing/labels)
+    const x = u * b_full;
 
     const shape = Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
     const w = w_max * shape;
@@ -400,3 +421,4 @@ export function longSideDeflectionProfile(
 
   return result;
 }
+
