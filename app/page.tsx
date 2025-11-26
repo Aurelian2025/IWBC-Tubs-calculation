@@ -230,6 +230,26 @@ const longProfile = longSideDeflectionProfile(tub, materials, 11);
     shortProfile={shortProfile}
     longProfile={longProfile}
   />
+  {/* Instructions overlay */}
+  <div
+    style={{
+      position: "absolute",
+      top: 8,
+      left: 8,
+      background: "rgba(255,255,255,0.85)",
+      border: "1px solid #ccc",
+      borderRadius: 6,
+      padding: "4px 8px",
+      fontSize: "0.75rem",
+      lineHeight: 1.3,
+      maxWidth: 240
+    }}
+  >
+    <strong>3D Controls:</strong><br />
+    • Zoom: mouse wheel<br />
+    • Rotate: left-click + drag<br />
+    • Pan: right-click or Ctrl + drag
+  </div>
 
   {/* Legend overlay in top-right corner of the 3D view */}
   <div
