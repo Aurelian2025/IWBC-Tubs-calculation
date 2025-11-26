@@ -197,6 +197,16 @@ function makeTextLabel(text: string): THREE.Sprite {
         const sphere = new THREE.Mesh(geom, mat);
         sphere.position.set(x, y, z);
         tubGroup.add(sphere);
+        // ADD LABEL HERE
+const label = makeTextLabel(
+  face === "bottom"
+    ? `B${idx + 1}`
+    : face === "front"
+    ? `L${idx + 1}`
+    : `S${idx + 1}`
+);
+label.position.set(x + radius * 1.5, y + radius * 1.5, z);
+tubGroup.add(label);
       });
     }
 
