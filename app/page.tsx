@@ -99,6 +99,30 @@ const bottomProfile = bottomDeflectionProfile(tub, materials, 11);
 const shortProfile = shortSideDeflectionProfile(tub, materials, 5);
 const longProfile = longSideDeflectionProfile(tub, materials, 11);
 
+    const INCH_TO_MM = 25.4;
+
+  const legend3DLines: string[] = [];
+
+  legend3DLines.push("Bottom δ (mm):");
+  bottomProfile.forEach((p, i) => {
+    const mm = p.deflection_in * INCH_TO_MM;
+    legend3DLines.push(`B${i + 1}: ${mm.toFixed(3)}`);
+  });
+
+  legend3DLines.push("");
+  legend3DLines.push("Short-side δ (mm):");
+  shortProfile.forEach((p, i) => {
+    const mm = p.deflection_in * INCH_TO_MM;
+    legend3DLines.push(`S${i + 1}: ${mm.toFixed(3)}`);
+  });
+
+  legend3DLines.push("");
+  legend3DLines.push("Long-side δ (mm):");
+  longProfile.forEach((p, i) => {
+    const mm = p.deflection_in * INCH_TO_MM;
+    legend3DLines.push(`L${i + 1}: ${mm.toFixed(3)}`);
+  });
+
   return (
     <main
       style={{
@@ -199,12 +223,37 @@ const longProfile = longSideDeflectionProfile(tub, materials, 11);
   longProfile={longProfile}
 />
 <h2 style={{ marginTop: "2rem" }}>3D Interactive View</h2>
-<Tub3D
-  tub={tub}
-  bottomProfile={bottomProfile}   // 10 points (correct)
-  shortProfile={shortProfile}     // 5 points (GREEN)
-  longProfile={longProfile}       // 10 points (BLUE)
-/>
+<div style={{ position: "relative", marginTop: "0.5rem" }}>
+  <Tub3D
+    tub={tub}
+    bottomProfile={bottomProfile}
+    shortProfile={shortProfile}
+    longProfile={longProfile}
+  />
+
+  {/* Legend overlay in top-right corner of the 3D view */}
+  <div
+    style={{
+      position: "absolute",
+      top: 8,
+      right: 8,
+      background: "rgba(255,255,255,0.85)",
+      border: "1px solid #ccc",
+      borderRadius: 6,
+      padding: "6px 10px",
+      fontSize: "0.75rem",
+      lineHeight: 1.3,
+      maxWidth: 220
+    }}
+  >
+    {legend3DLines.map((line, idx) => (
+      <div key={idx}>
+        {line === "" ? <span>&nbsp;</span> : line}
+      </div>
+    ))}
+  </div>
+</div>
+
 
 
 </section>
