@@ -24,6 +24,13 @@ const PLATE_SAMPLE_POINTS: { u: number; v: number }[] = [
   { u: 2 / 3, v: 0.20 },
   { u: 0.95, v: 0.20 }
 ];
+const SHORT_SAMPLE_POINTS_5: { u: number; v: number }[] = [
+  { u: 0.05, v: 0.10 },
+  { u: 0.95, v: 0.10 },
+  { u: 0.50, v: 0.50 },
+  { u: 0.05, v: 0.90 },
+  { u: 0.95, v: 0.90 }
+];
 
 type Tub3DProps = {
   tub: TubGeometry;
@@ -120,32 +127,39 @@ export default function Tub3D({
         ) || 1e-6;
 
       profile.forEach((p, idx) => {
-        const uv =
-          PLATE_SAMPLE_POINTS[idx] ??
-          PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
-        const u = uv.u;
-        const v = uv.v;
+    let uv;
+    if (face === "right") {
+      // short side: 5-point layout
+      uv =
+        SHORT_SAMPLE_POINTS_5[idx] ??
+        SHORT_SAMPLE_POINTS_5[SHORT_SAMPLE_POINTS_5.length - 1];
+    } else {
+      // bottom and long side (front) use the 10-point pattern
+      uv =
+        PLATE_SAMPLE_POINTS[idx] ??
+        PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
+    }
 
-        let x = 0,
-          y = 0,
-          z = 0;
+    const u = uv.u;
+    const v = uv.v;
 
-        if (face === "bottom") {
-          // bottom plate: x along length, z along width, y = 0
-          x = (u - 0.5) * Lw;
-          z = (v - 0.5) * Ww;
-          y = 0;
-        } else if (face === "front") {
-          // front wall: x along length, y along height, z = -Ww/2
-          x = (u - 0.5) * Lw;
-          y = v * Hw;
-          z = -Ww / 2;
-        } else if (face === "right") {
-          // right wall: z along width, y along height, x = Lw/2
-          x = Lw / 2;
-          y = v * Hw;
-          z = (u - 0.5) * Ww;
-        }
+    let x = 0,
+      y = 0,
+      z = 0;
+
+    if (face === "bottom") {
+      x = (u - 0.5) * Lw;
+      z = (v - 0.5) * Ww;
+      y = 0;
+    } else if (face === "front") {
+      x = (u - 0.5) * Lw;
+      y = v * Hw;
+      z = -Ww / 2;
+    } else if (face === "right") {
+      x = Lw / 2;
+      y = v * Hw;
+      z = (u - 0.5) * Ww;
+    }
 
         const frac = Math.abs(p.deflection_in) / maxDef;
         const radius = 0.02 * (1 + 2 * frac) * Math.max(Lw, Ww, Hw);
