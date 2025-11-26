@@ -136,7 +136,7 @@ const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in); // inches
 }
 
 // -------------------------
-// MDF Bottom Deflection (plate model, 4 edges simply supported)
+// MDF Bottom Deflection (plate on foam foundation, with bottom extrusions)
 // -------------------------
 
 export function mdfBottomDeflection(
@@ -150,30 +150,49 @@ export function mdfBottomDeflection(
   // Uniform pressure on the bottom (psi = lb/in^2)
   const q_bottom = gamma * h_water;
 
-    // Plate dimensions: bottom of the tub, broken into panels by transverse extrusions
-  // Treat n_transverse as the number of supports along the length.
-  const nPanels = Math.max(2, tub.n_transverse);  // at least two supports
-  const panelLen = tub.L_tub_in / (nPanels - 1);  // spacing between extrusions (in)
+  // Bottom transverse extrusions break the bottom into panels along the length
+  const nPanels = Math.max(2, tub.n_transverse);        // at least two supports
+  const panelLen = tub.L_tub_in / (nPanels - 1);        // spacing between extrusions (in)
 
-  // Use the panel span as the "shorter side" of the plate
-  const a = Math.min(panelLen, tub.W_tub_in);     // effective short side (in)
-  const b = Math.max(panelLen, tub.W_tub_in);     // long side (in)
+  // Effective shorter side of the panel: min(panel length, tub width)
+  const a = Math.min(panelLen, tub.W_tub_in);           // in
+  const b = Math.max(panelLen, tub.W_tub_in);           // in
 
-  const t = tub.t_mdf_bottom_in;         // thickness (in)
-  const E = materials.mdf_extira.E_psi;  // psi
-  const D = plateFlexuralRigidity(E, t); // lb·in
+  // MDF plate properties
+  const t = tub.t_mdf_bottom_in;                        // thickness (in)
+  const E = materials.mdf_extira.E_psi;                 // psi
+  const D = plateFlexuralRigidity(E, t);                // lb·in
 
-  const delta_max =
-    PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D;
+  // --- 1) BENDING deflection of the plate alone ---
+  const delta_plate =
+    PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D; // in
 
-  // For stress, approximate as a beam spanning along the short side a,
-  // with tributary width b (one panel)
+  // --- 2) FOAM foundation deflection alone ---
+  // Approximate XPS foam stiffness as E_foam / t_foam
+  const E_foam = 400;        // psi (approx compressive modulus)
+  const t_foam = 0.5;        // in (foam thickness)
+  const k_foam = E_foam / t_foam; // psi per inch
+
+  // For uniform pressure, vertical deformation at the surface:
+  // delta_foam ≈ q_bottom / k_foam
+  const delta_foam = k_foam > 0 ? q_bottom / k_foam : 0; // in
+
+  // --- 3) Combine plate + foam as springs in parallel ---
+  let delta_max = delta_plate;
+  if (delta_plate > 0 && delta_foam > 0) {
+    delta_max = 1 / (1 / delta_plate + 1 / delta_foam);
+  } else if (delta_plate <= 0 && delta_foam > 0) {
+    delta_max = delta_foam;
+  }
+
+  // For stress, still approximate as a beam spanning along a,
+  // with tributary width b (one panel).
   const w_line = q_bottom * b;              // lb/in along span a
   const I_beam = (b * Math.pow(t, 3)) / 12; // in^4
   const c = t / 2;
 
-  const M_max = (w_line * Math.pow(a, 2)) / 8;
-  const sigma_max = (M_max * c) / I_beam;
+  const M_max = (w_line * Math.pow(a, 2)) / 8; // lb·in
+  const sigma_max = (M_max * c) / I_beam;      // psi
 
   return {
     span: a,
@@ -182,7 +201,6 @@ export function mdfBottomDeflection(
     delta_max,
     sigma_max
   };
-
 }
 
 
