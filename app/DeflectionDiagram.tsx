@@ -41,6 +41,14 @@ const PLATE_SAMPLE_POINTS: { u: number; v: number }[] = [
   { u: 2 / 3, v: 0.20 },
   { u: 0.95, v: 0.20 }
 ];
+// Short-side 5-point layout for front/right wall drawing
+const SHORT_SAMPLE_POINTS_5: { u: number; v: number }[] = [
+  { u: 0.05, v: 0.10 },
+  { u: 0.95, v: 0.10 },
+  { u: 0.50, v: 0.50 },
+  { u: 0.05, v: 0.90 },
+  { u: 0.95, v: 0.90 }
+];
 
 export default function DeflectionDiagram({
   tub,
@@ -216,15 +224,14 @@ export default function DeflectionDiagram({
     return { def: p.deflection_in, idx: idx + 1, svg };
   });
 
-  // Map short-side points to right interior wall (short side)
+    // Map short-side points to right interior wall (short side)
   const shortPointsSvg = shortProfile.map((p, idx) => {
     const uv =
-      PLATE_SAMPLE_POINTS[idx] ??
-      PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
+      SHORT_SAMPLE_POINTS_5[idx] ??
+      SHORT_SAMPLE_POINTS_5[SHORT_SAMPLE_POINTS_5.length - 1];
     const svg = bilerp(uv.u, uv.v, iFBR, iBBR, iBTR, iFTR);
     return { def: p.deflection_in, idx: idx + 1, svg };
   });
-
 
   // Legend with actual values (mm)
   const legendLines: string[] = [];
