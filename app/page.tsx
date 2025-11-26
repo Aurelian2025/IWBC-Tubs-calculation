@@ -201,10 +201,11 @@ const longProfile = longSideDeflectionProfile(tub, materials, 10);
 <h2 style={{ marginTop: "2rem" }}>3D Interactive View</h2>
 <Tub3D
   tub={tub}
-  bottomProfile={bottomProfile}
-  shortProfile={shortProfile}
-  longProfile={longProfile}
+  bottomProfile={bottomProfile}   // 10 points (correct)
+  shortProfile={shortProfile}     // 5 points (GREEN)
+  longProfile={longProfile}       // 10 points (BLUE)
 />
+
 
 </section>
 
