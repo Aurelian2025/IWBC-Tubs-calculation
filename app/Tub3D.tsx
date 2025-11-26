@@ -158,10 +158,10 @@ export default function Tub3D({
       });
     }
 
-    // Add points: Bottom (red), Short/front (green), Long/right (blue)
+        // Add points: Bottom (red), Long/front (blue), Short/right (green)
     addDeflectionPoints(bottomProfile, 0xdd0000, "bottom");
-    addDeflectionPoints(shortProfile, 0x00aa00, "front");
-    addDeflectionPoints(longProfile, 0x0000dd, "right");
+    addDeflectionPoints(longProfile, 0x0000dd, "front");
+    addDeflectionPoints(shortProfile, 0x00aa00, "right");
 
     // Manual rotation & zoom
     let isDragging = false;
