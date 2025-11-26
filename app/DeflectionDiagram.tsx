@@ -347,7 +347,7 @@ export default function DeflectionDiagram({
         );
       })}
 
-      {/* Short-side points (green) on front interior wall */}
+      {/* Short-side points (green) on right interior wall */}
       {shortPointsSvg.map((p) => {
         const mm = p.def * INCH_TO_MM;
         const r = radiusFromDeflection(p.def);
@@ -376,7 +376,7 @@ export default function DeflectionDiagram({
         );
       })}
 
-      {/* Long-side points (blue) on right interior wall */}
+      {/* Long-side points (blue) on front interior wall */}
       {longPointsSvg.map((p) => {
         const mm = p.def * INCH_TO_MM;
         const r = radiusFromDeflection(p.def);
