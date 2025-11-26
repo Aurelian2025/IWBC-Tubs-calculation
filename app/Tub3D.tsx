@@ -47,7 +47,7 @@ export default function Tub3D({
     if (!mount) return;
 
     const width = mount.clientWidth || 800;
-    const height = 300;
+    const height = 800;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf8f8f8);
