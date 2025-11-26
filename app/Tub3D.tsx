@@ -203,15 +203,24 @@ export default function Tub3D({
         sphere.position.set(x, y, z);
         tubGroup.add(sphere);
         // ADD LABEL HERE
-const label = makeTextLabel(
-  face === "bottom"
-    ? `B${idx + 1}`
-    : face === "front"
-    ? `L${idx + 1}`
-    : `S${idx + 1}`
-);
+let labelText = "";
+let labelColor = "";
+
+if (face === "bottom") {
+  labelText = `B${idx + 1}`;
+  labelColor = "#660000";  // dark red
+} else if (face === "front") {
+  labelText = `L${idx + 1}`;
+  labelColor = "#000066";  // dark blue
+} else {
+  labelText = `S${idx + 1}`;
+  labelColor = "#004400";  // dark green
+}
+
+const label = makeTextLabel(labelText, labelColor);
 label.position.set(x + radius * 1.5, y + radius * 1.5, z);
 tubGroup.add(label);
+
       });
     }
 
