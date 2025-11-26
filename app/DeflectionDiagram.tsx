@@ -257,9 +257,9 @@ export default function DeflectionDiagram({
     legendLines.push(`L${i + 1}: ${mm.toFixed(3)}`);
   });
 
-  const legendX = svgWidth - margin - 10;
-  const legendY = margin + 20;
+    const legendX = svgWidth - margin - 10;
   const lineHeight = 12;
+  const legendY = margin + 20 - 4 * lineHeight;
 
   return (
     <svg width={svgWidth} height={svgHeight}>
