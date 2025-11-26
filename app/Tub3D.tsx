@@ -2,7 +2,6 @@
 
 import React, { useRef, useEffect } from "react";
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { TubGeometry } from "../calcs";
 
 type DeflectionPoint = {
@@ -62,13 +61,13 @@ export default function Tub3D({
     const Ww = tub.W_tub_in * INCH_TO_WORLD;
     const Hw = tub.H_tub_in * INCH_TO_WORLD;
 
-    camera.position.set(Lw * 1.3, Hw * 1.4, Ww * 1.6);
+    const initialRadius = Math.max(Lw, Ww, Hw) * 3;
+    camera.position.set(initialRadius, initialRadius, initialRadius);
     camera.lookAt(0, Hw / 2, 0);
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.rotateSpeed = 0.9;
+    // Simple manual "orbit": rotate a group instead of camera controls
+    const tubGroup = new THREE.Group();
+    scene.add(tubGroup);
 
     // Lights
     const ambient = new THREE.AmbientLight(0xffffff, 0.8);
@@ -83,11 +82,12 @@ export default function Tub3D({
     const lineMat = new THREE.LineBasicMaterial({ color: 0x333333 });
     const box = new THREE.LineSegments(edges, lineMat);
     box.position.set(0, Hw / 2, 0);
-    scene.add(box);
+    tubGroup.add(box);
 
     // Water surface plane
-    const hWater = Math.min(tub.water_freeboard_in, tub.H_tub_in) * INCH_TO_WORLD;
-    const waterFrac = Math.max(0, Math.min(1, hWater / Hw));
+    const hWaterIn = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+    const hWaterWorld = hWaterIn * INCH_TO_WORLD;
+    const waterFrac = Math.max(0, Math.min(1, hWaterWorld / Hw));
     const waterY = waterFrac * Hw;
 
     const waterGeom = new THREE.PlaneGeometry(Lw, Ww);
@@ -100,15 +100,14 @@ export default function Tub3D({
     const water = new THREE.Mesh(waterGeom, waterMat);
     water.rotation.x = -Math.PI / 2;
     water.position.set(0, waterY, 0);
-    scene.add(water);
+    tubGroup.add(water);
 
-    // Grid/help floor (optional)
+    // Floor grid (optional)
     const grid = new THREE.GridHelper(Lw * 2, 20, 0xbbbbbb, 0xe0e0e0);
-    // Move grid to tub bottom plane
     grid.position.y = 0;
-    scene.add(grid);
+    tubGroup.add(grid);
 
-    // Helper for spheres
+    // Helper for spheres on each face
     function addDeflectionPoints(
       profile: DeflectionPoint[],
       color: number,
@@ -121,12 +120,15 @@ export default function Tub3D({
         ) || 1e-6;
 
       profile.forEach((p, idx) => {
-        const uv = PLATE_SAMPLE_POINTS[idx] ??
+        const uv =
+          PLATE_SAMPLE_POINTS[idx] ??
           PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
         const u = uv.u;
         const v = uv.v;
 
-        let x = 0, y = 0, z = 0;
+        let x = 0,
+          y = 0,
+          z = 0;
 
         if (face === "bottom") {
           // bottom plate: x along length, z along width, y = 0
@@ -146,26 +148,82 @@ export default function Tub3D({
         }
 
         const frac = Math.abs(p.deflection_in) / maxDef;
-        const radius = 0.02 * (1 + 2 * frac) * Lw; // scale radius with L
+        const radius = 0.02 * (1 + 2 * frac) * Math.max(Lw, Ww, Hw);
 
         const geom = new THREE.SphereGeometry(radius, 16, 16);
         const mat = new THREE.MeshPhongMaterial({ color });
         const sphere = new THREE.Mesh(geom, mat);
         sphere.position.set(x, y, z);
-        scene.add(sphere);
+        tubGroup.add(sphere);
       });
     }
 
-    // Bottom (red), short/front (green), long/right (blue)
+    // Add points: Bottom (red), Short/front (green), Long/right (blue)
     addDeflectionPoints(bottomProfile, 0xdd0000, "bottom");
     addDeflectionPoints(shortProfile, 0x00aa00, "front");
     addDeflectionPoints(longProfile, 0x0000dd, "right");
+
+    // Manual rotation & zoom
+    let isDragging = false;
+    let prevX = 0;
+    let prevY = 0;
+    let currentRadius = initialRadius;
+
+    const onMouseDown = (event: MouseEvent) => {
+      isDragging = true;
+      prevX = event.clientX;
+      prevY = event.clientY;
+    };
+
+    const onMouseMove = (event: MouseEvent) => {
+      if (!isDragging) return;
+      const dx = event.clientX - prevX;
+      const dy = event.clientY - prevY;
+      prevX = event.clientX;
+      prevY = event.clientY;
+
+      const rotSpeed = 0.005;
+      tubGroup.rotation.y += dx * rotSpeed;
+      tubGroup.rotation.x += dy * rotSpeed;
+      tubGroup.rotation.x = Math.max(
+        -Math.PI / 2,
+        Math.min(Math.PI / 2, tubGroup.rotation.x)
+      );
+    };
+
+    const onMouseUp = () => {
+      isDragging = false;
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      const delta = event.deltaY;
+      const zoomFactor = 1.05;
+      if (delta > 0) {
+        currentRadius *= zoomFactor;
+      } else {
+        currentRadius /= zoomFactor;
+      }
+      const dir = new THREE.Vector3(
+        camera.position.x,
+        camera.position.y,
+        camera.position.z
+      )
+        .sub(new THREE.Vector3(0, Hw / 2, 0))
+        .normalize();
+      camera.position.copy(
+        new THREE.Vector3(0, Hw / 2, 0).add(dir.multiplyScalar(currentRadius))
+      );
+    };
+
+    renderer.domElement.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    renderer.domElement.addEventListener("wheel", onWheel, { passive: true });
 
     let animationFrameId: number;
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      controls.update();
       renderer.render(scene, camera);
     };
     animate();
@@ -182,9 +240,16 @@ export default function Tub3D({
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      renderer.domElement.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      renderer.domElement.removeEventListener("wheel", onWheel);
+      window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animationFrameId);
       renderer.dispose();
-      mount.removeChild(renderer.domElement);
+      if (mount.contains(renderer.domElement)) {
+        mount.removeChild(renderer.domElement);
+      }
     };
   }, [tub, bottomProfile, shortProfile, longProfile]);
 
