@@ -19,10 +19,20 @@ export type TubGeometry = {
   t_mdf_bottom_in: number;
   t_mdf_side_in: number;
 
+  // we are using this as water depth from the bottom (in)
   water_freeboard_in: number;
 
+  // bottom transverse extrusions (2525) spanning across width
   n_transverse: number;
+
+  // posts (stiffeners) on the long sides (per long wall)
+  n_long_side_posts: number;
+
+  // posts (stiffeners) on the short sides (per short wall)
+  n_short_side_posts: number;
 };
+
+
 
 export type FrameGeometry = {
   L_frame_in: number;
@@ -126,47 +136,46 @@ const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in); // inches
 }
 
 // -------------------------
-// MDF Bottom Deflection (plate model, 4 edges simply supported)
+// MDF Bottom Deflection (plate model, with bottom extrusions)
 // -------------------------
 
 export function mdfBottomDeflection(
   tub: TubGeometry,
   materials: MaterialsConfig
 ) {
-  // We interpret water_freeboard_in as **water depth from the bottom**
-  const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in); // in
-  const gamma = materials.water.gamma_psi_per_in;                 // psi per inch of depth
+  // water_freeboard_in is used as water depth from the bottom (in)
+  const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+  const gamma = materials.water.gamma_psi_per_in;
 
-  // Uniform pressure on the bottom (psi = lb/in^2)
+  // Uniform pressure on the bottom (psi)
   const q_bottom = gamma * h_water;
 
-  // Plate dimensions: bottom of the tub
-  const a = Math.min(tub.L_tub_in, tub.W_tub_in); // shorter side (in)
-  const b = Math.max(tub.L_tub_in, tub.W_tub_in); // longer side (in)
+  // Bottom transverse extrusions break the bottom into panels along L
+  const nBottom = Math.max(2, tub.n_transverse); // at least two supports
+  const panelLen = tub.L_tub_in / (nBottom - 1); // spacing between extrusions
 
-  const t = tub.t_mdf_bottom_in;         // thickness (in)
-  const E = materials.mdf_extira.E_psi;  // psi
-  const D = plateFlexuralRigidity(E, t); // lb·in
+  // Effective shorter side of the plate is min(width, panel length)
+  const a = Math.min(tub.W_tub_in, panelLen);
 
-  // Max deflection of a simply supported rectangular plate under uniform load:
-  // w_max ≈ q * a^4 / (64 * D)
+  const t = tub.t_mdf_bottom_in;
+  const E = materials.mdf_extira.E_psi;
+  const D = plateFlexuralRigidity(E, t);
+
+  // Max deflection of panel under uniform load
   const delta_max =
-  PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D;
+    PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D;
 
-
-  // For stress, approximate plate as a beam spanning along the short side a
-  // line load w_line = q_bottom * b (lb/in)
-  const w_line = q_bottom * b;            // lb/in along span a
-  const I_beam = (b * Math.pow(t, 3)) / 12; // in^4
+  // Approximate stress: treat each strip along panel as a beam
+  const b_panel = panelLen;
+  const w_line = q_bottom * b_panel; // line load along span a
+  const I_beam = (b_panel * Math.pow(t, 3)) / 12;
   const c = t / 2;
-
-  // Simply supported beam, uniform load: M_max = wL^2 / 8
   const M_max = (w_line * Math.pow(a, 2)) / 8;
   const sigma_max = (M_max * c) / I_beam;
 
   return {
-    span: a,         // effective span (shorter side)
-    w_strip: w_line, // line load along that span
+    span: a,
+    w_strip: w_line,
     M_max,
     delta_max,
     sigma_max
@@ -226,34 +235,35 @@ const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
 }
 
 // -------------------------
-// Bottom deflection profile (10 points)
-// 4-edge simply supported plate; profile along tub length
+// Bottom deflection profile (11 points)
+// plate panel between bottom extrusions
 // -------------------------
 
 export function bottomDeflectionProfile(
   tub: TubGeometry,
   materials: MaterialsConfig,
-  nPoints: number = 10
+  nPoints: number = 11
 ): { x_in: number; deflection_in: number }[] {
-  // water_freeboard_in is used as water depth from the bottom (in)
+  // water depth
   const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
-  const gamma = materials.water.gamma_psi_per_in; // psi per inch of depth
+  const gamma = materials.water.gamma_psi_per_in;
 
-  // Uniform pressure on the bottom (psi)
   const q_bottom = gamma * h_water;
 
-  // Plate properties: use same as mdfBottomDeflection
-  const a = Math.min(tub.L_tub_in, tub.W_tub_in); // shorter side of plate (in)
-  const t = tub.t_mdf_bottom_in;                  // thickness (in)
-  const E = materials.mdf_extira.E_psi;           // psi
-  const D = plateFlexuralRigidity(E, t);          // lb·in
+  // Same panel logic as mdfBottomDeflection
+  const nBottom = Math.max(2, tub.n_transverse);
+  const panelLen = tub.L_tub_in / (nBottom - 1);
+  const a = Math.min(tub.W_tub_in, panelLen);
 
-  // Max deflection from plate theory (simply supported, uniform load)
+  const t = tub.t_mdf_bottom_in;
+  const E = materials.mdf_extira.E_psi;
+  const D = plateFlexuralRigidity(E, t);
+
   const w_max =
     PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D;
 
-  const L_len = tub.L_tub_in; // length direction
-  const W_len = tub.W_tub_in; // width direction
+  const L_len = tub.L_tub_in;
+  const W_len = tub.W_tub_in;
 
   const pts = PLATE_SAMPLE_POINTS.slice(0, nPoints);
 
@@ -263,9 +273,8 @@ export function bottomDeflectionProfile(
     const u = p.u; // 0..1 along length
     const v = p.v; // 0..1 along width
 
-    // physical position in inches (we only return x for now)
     const x = u * L_len;
-    // const y = v * W_len; // could be returned later if needed
+    // we don't currently return y, but it would be v * W_len
 
     // plate mode shape: 0 at edges, max at center
     const shape = Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
@@ -281,7 +290,7 @@ export function bottomDeflectionProfile(
 
 // -------------------------
 // Short-side wall deflection profile (5 points)
-// 4-edge simply supported plate under average lateral pressure
+// plate with vertical span (height) and posts along width
 // -------------------------
 
 export function shortSideDeflectionProfile(
@@ -292,28 +301,36 @@ export function shortSideDeflectionProfile(
   const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
   const gamma = materials.water.gamma_psi_per_in;
 
-  // average lateral pressure on wall
-  const q_side = gamma * h_water * 0.5; // psi
+  // average lateral pressure (triangular load → γ h / 2)
+  const q_side = gamma * h_water * 0.5;
 
-  const a = tub.H_tub_in; // shorter side = height
-  const b = tub.W_tub_in; // longer side = width
+  const a = tub.H_tub_in; // vertical span (height)
+
+  // posts along the short-side width
+  const nShort = Math.max(0, tub.n_short_side_posts);
+  const b_full = tub.W_tub_in; // full wall width
+  const b_panel = b_full / (nShort + 1); // panel width between posts
+
   const t = tub.t_mdf_side_in;
   const E = materials.mdf_extira.E_psi;
   const D = plateFlexuralRigidity(E, t);
 
-  const w_max =
+  // base plate deflection for full width
+  let w_max =
     PLATE_DEFLECTION_COEFF * (q_side * Math.pow(a, 4)) / D;
+
+  // scale by (panel width / full width)^4 to reflect stiffer panels
+  w_max *= Math.pow(b_panel / b_full, 4);
 
   const pts = SHORT_SAMPLE_POINTS_5.slice(0, nPoints);
 
   const result: { x_in: number; deflection_in: number }[] = [];
 
   for (const p of pts) {
-    const u = p.u; // 0..1 along width b
-    const v = p.v; // 0..1 along height a
+    const u = p.u; // along width 0..1 → 0..b_full
+    const v = p.v; // along height 0..1 → 0..a
 
-    const x = u * b;
-    // const y = v * a;
+    const x = u * b_full;
 
     const shape = Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
     const w = w_max * shape;
@@ -325,42 +342,46 @@ export function shortSideDeflectionProfile(
 }
 
 
-
 // -------------------------
-// Long-side wall deflection profile (10 points)
-// 4-edge simply supported plate under average lateral pressure
+// Long-side wall deflection profile (11 points)
+// plate with vertical span (height) and posts along length
 // -------------------------
 
 export function longSideDeflectionProfile(
   tub: TubGeometry,
   materials: MaterialsConfig,
-  nPoints: number = 10
+  nPoints: number = 11
 ): { x_in: number; deflection_in: number }[] {
   const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
   const gamma = materials.water.gamma_psi_per_in;
 
-  // average lateral pressure on wall
-  const q_side = gamma * h_water * 0.5; // psi
+  const q_side = gamma * h_water * 0.5;
 
-  const a = tub.H_tub_in; // shorter side = height
-  const b = tub.L_tub_in; // longer side = length
+  const a = tub.H_tub_in; // vertical span (height)
+
+  // posts along long-side length
+  const nLong = Math.max(0, tub.n_long_side_posts);
+  const b_full = tub.L_tub_in; // full wall length
+  const b_panel = b_full / (nLong + 1); // panel length between posts
+
   const t = tub.t_mdf_side_in;
   const E = materials.mdf_extira.E_psi;
   const D = plateFlexuralRigidity(E, t);
 
-  const w_max =
+  let w_max =
     PLATE_DEFLECTION_COEFF * (q_side * Math.pow(a, 4)) / D;
+
+  w_max *= Math.pow(b_panel / b_full, 4);
 
   const pts = PLATE_SAMPLE_POINTS.slice(0, nPoints);
 
   const result: { x_in: number; deflection_in: number }[] = [];
 
   for (const p of pts) {
-    const u = p.u; // 0..1 along length b
-    const v = p.v; // 0..1 along height a
+    const u = p.u; // along length 0..1 → 0..b_full
+    const v = p.v; // along height 0..1 → 0..a
 
-    const x = u * b;
-    // const y = v * a;
+    const x = u * b_full;
 
     const shape = Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
     const w = w_max * shape;
@@ -370,4 +391,5 @@ export function longSideDeflectionProfile(
 
   return result;
 }
+
 
