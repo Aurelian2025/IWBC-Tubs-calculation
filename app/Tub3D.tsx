@@ -84,23 +84,19 @@ export default function Tub3D({
     dir.position.set(1, 2, 1);
     scene.add(dir);
 
-   function makeTextLabel(text: string): THREE.Sprite {
+  function makeTextLabel(text: string, color: string): THREE.Sprite {
   const fontSize = 64;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d")!;
   canvas.width = 256;
   canvas.height = 128;
 
-  // --- NO BACKGROUND FILL ---
-  // ctx.fillStyle = "rgba(255,255,255,0.9)";
-  // ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Clear the canvas fully transparent
+  // Transparent background
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Draw text only
+  // Draw text using the passed color
   ctx.font = `${fontSize}px sans-serif`;
-  ctx.fillStyle = "black";           // pure black text
+  ctx.fillStyle = color;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(text, canvas.width / 2, canvas.height / 2);
@@ -110,17 +106,15 @@ export default function Tub3D({
 
   const material = new THREE.SpriteMaterial({
     map: texture,
-    transparent: true,      // allow transparent background
-    alphaTest: 0.05         // prevents faint edges
+    transparent: true,
+    alphaTest: 0.05
   });
 
   const sprite = new THREE.Sprite(material);
-
-  // world size (makes text small and neat)
-  sprite.scale.set(0.35, 0.15, 1);
-
+  sprite.scale.set(0.35, 0.15, 1); // world size
   return sprite;
 }
+
 
     // Tub wireframe (inner volume)
     const boxGeom = new THREE.BoxGeometry(Lw, Hw, Ww);
