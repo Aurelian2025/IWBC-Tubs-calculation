@@ -256,36 +256,49 @@ const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
 }
 
 // -------------------------
-// Bottom deflection profile (10 points)
-// 4-edge simply supported plate; profile along tub length
+// Bottom deflection profile (plate on foam foundation, 11 points)
 // -------------------------
 
 export function bottomDeflectionProfile(
   tub: TubGeometry,
   materials: MaterialsConfig,
-  nPoints: number = 10
+  nPoints: number = 11
 ): { x_in: number; deflection_in: number }[] {
-  // water_freeboard_in is used as water depth from the bottom (in)
+  // water depth
   const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in);
-  const gamma = materials.water.gamma_psi_per_in; // psi per inch of depth
+  const gamma = materials.water.gamma_psi_per_in;
 
-  // Uniform pressure on the bottom (psi)
-  const q_bottom = gamma * h_water;
+  const q_bottom = gamma * h_water; // psi
 
-    // Plate properties: panel between bottom extrusions, same as mdfBottomDeflection
+  // Same panel logic as mdfBottomDeflection
   const nPanels = Math.max(2, tub.n_transverse);
   const panelLen = tub.L_tub_in / (nPanels - 1);
   const a = Math.min(panelLen, tub.W_tub_in); // effective short side (in)
 
-  const t = tub.t_mdf_bottom_in;                  // thickness (in)
-  const E = materials.mdf_extira.E_psi;           // psi
-  const D = plateFlexuralRigidity(E, t);          // lb·in
+  const t = tub.t_mdf_bottom_in;
+  const E = materials.mdf_extira.E_psi;
+  const D = plateFlexuralRigidity(E, t);
 
-  const w_max =
-    PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D;
+  // Plate-only deflection at center
+  const w_plate =
+    PLATE_DEFLECTION_COEFF * (q_bottom * Math.pow(a, 4)) / D; // in
 
-  const L_len = tub.L_tub_in; // length direction
-  const W_len = tub.W_tub_in; // width direction
+  // Foam-only deflection
+  const E_foam = 400;        // psi
+  const t_foam = 0.5;        // in
+  const k_foam = E_foam / t_foam; // psi/in
+  const w_foam = k_foam > 0 ? q_bottom / k_foam : 0; // in
+
+  // Combined effective max deflection
+  let w_max = w_plate;
+  if (w_plate > 0 && w_foam > 0) {
+    w_max = 1 / (1 / w_plate + 1 / w_foam);
+  } else if (w_plate <= 0 && w_foam > 0) {
+    w_max = w_foam;
+  }
+
+  const L_len = tub.L_tub_in;
+  const W_len = tub.W_tub_in;
 
   const pts = PLATE_SAMPLE_POINTS.slice(0, nPoints);
 
@@ -295,11 +308,10 @@ export function bottomDeflectionProfile(
     const u = p.u; // 0..1 along length
     const v = p.v; // 0..1 along width
 
-    // physical position in inches (we only return x for now)
     const x = u * L_len;
-    // const y = v * W_len; // could be returned later if needed
+    // y could be v * W_len if we needed it
 
-    // plate mode shape: 0 at edges, max at center
+    // Same plate mode shape used for the spatial distribution
     const shape = Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
     const w = w_max * shape;
 
@@ -308,7 +320,6 @@ export function bottomDeflectionProfile(
 
   return result;
 }
-
 
 
 // -------------------------
