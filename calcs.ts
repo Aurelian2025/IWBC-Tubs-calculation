@@ -20,10 +20,19 @@ export type TubGeometry = {
   t_mdf_bottom_in: number;
   t_mdf_side_in: number;
 
+  // water depth (in)
   water_freeboard_in: number;
 
+  // bottom transverse extrusions (2525)
   n_transverse: number;
+
+  // NEW: transverse stiffeners / posts on the long side walls
+  n_long_side_posts: number;   // per long wall
+
+  // NEW: transverse stiffeners / posts on the short side walls
+  n_short_side_posts: number;  // per short wall
 };
+
 
 export type FrameGeometry = {
   L_frame_in: number;
@@ -300,24 +309,37 @@ export function shortSideDeflectionProfile(
   // average lateral pressure on wall
   const q_side = gamma * h_water * 0.5; // psi
 
-  const a = tub.H_tub_in; // shorter side = height
-  const b = tub.W_tub_in; // longer side = width
+  // vertical span (height)
+  const a = tub.H_tub_in;
+
+  // FULL width of the short-side wall
+  const b_full = tub.W_tub_in;
+
+  // posts divide the width into equal panels
+  const nShort = Math.max(0, tub.n_short_side_posts);
+  const b_panel = b_full / (nShort + 1); // panel width between posts
+
   const t = tub.t_mdf_side_in;
   const E = materials.mdf_extira.E_psi;
   const D = plateFlexuralRigidity(E, t);
 
-  const w_max =
+  // base plate deflection using full height
+  let w_max =
     PLATE_DEFLECTION_COEFF * (q_side * Math.pow(a, 4)) / D;
+
+  // scale deflection by (panel width / full width)^4 → stiffer with more posts
+  w_max *= Math.pow(b_panel / b_full, 4);
 
   const pts = SHORT_SAMPLE_POINTS_5.slice(0, nPoints);
 
   const result: { x_in: number; deflection_in: number }[] = [];
 
   for (const p of pts) {
-    const u = p.u; // 0..1 along width b
-    const v = p.v; // 0..1 along height a
+    const u = p.u; // 0..1 across the full width
+    const v = p.v; // 0..1 along height
 
-    const x = u * b;
+    // physical x-position uses FULL width (for drawing and labeling)
+    const x = u * b_full;
     // const y = v * a;
 
     const shape = Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
@@ -328,7 +350,6 @@ export function shortSideDeflectionProfile(
 
   return result;
 }
-
 
 
 // -------------------------
