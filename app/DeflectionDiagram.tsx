@@ -198,26 +198,33 @@ export default function DeflectionDiagram({
     return 4 + 6 * frac; // between 4 and 10 px
   }
 
-  // Map bottom points to interior bottom surface (quad: iFBL, iFBR, iBBR, iBBL)
+    // Map bottom points to interior bottom surface (quad: iFBL, iFBR, iBBR, iBBL)
   const bottomPointsSvg = bottomProfile.map((p, idx) => {
-    const uv = PLATE_SAMPLE_POINTS[idx] ?? PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
+    const uv =
+      PLATE_SAMPLE_POINTS[idx] ??
+      PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
     const svg = bilerp(uv.u, uv.v, iFBL, iFBR, iBBR, iBBL);
     return { def: p.deflection_in, idx: idx + 1, svg };
   });
 
-  // Map short-side points to front interior wall (quad: iFBL, iFBR, iFTR, iFTL)
-  const shortPointsSvg = shortProfile.map((p, idx) => {
-    const uv = PLATE_SAMPLE_POINTS[idx] ?? PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
+  // Map long-side points to front interior wall (long side)
+  const longPointsSvg = longProfile.map((p, idx) => {
+    const uv =
+      PLATE_SAMPLE_POINTS[idx] ??
+      PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
     const svg = bilerp(uv.u, uv.v, iFBL, iFBR, iFTR, iFTL);
     return { def: p.deflection_in, idx: idx + 1, svg };
   });
 
-  // Map long-side points to right interior wall (quad: iFBR, iBBR, iBTR, iFTR)
-  const longPointsSvg = longProfile.map((p, idx) => {
-    const uv = PLATE_SAMPLE_POINTS[idx] ?? PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
+  // Map short-side points to right interior wall (short side)
+  const shortPointsSvg = shortProfile.map((p, idx) => {
+    const uv =
+      PLATE_SAMPLE_POINTS[idx] ??
+      PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
     const svg = bilerp(uv.u, uv.v, iFBR, iBBR, iBTR, iFTR);
     return { def: p.deflection_in, idx: idx + 1, svg };
   });
+
 
   // Legend with actual values (mm)
   const legendLines: string[] = [];
