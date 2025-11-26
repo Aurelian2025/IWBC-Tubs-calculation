@@ -65,6 +65,15 @@ const PLATE_SAMPLE_POINTS: { u: number; v: number }[] = [
   { u: 2 / 3, v: 0.20 },
   { u: 0.95, v: 0.20 }
 ];
+// Short-side 5-point layout: 4 near corners + 1 in center
+const SHORT_SAMPLE_POINTS_5: { u: number; v: number }[] = [
+  { u: 0.05, v: 0.10 }, // bottom-front corner
+  { u: 0.95, v: 0.10 }, // bottom-back corner
+  { u: 0.50, v: 0.50 }, // center
+  { u: 0.05, v: 0.90 }, // top-front corner
+  { u: 0.95, v: 0.90 }  // top-back corner
+];
+
 
 // -------------------------
 // Beam Formulas
@@ -294,7 +303,7 @@ export function shortSideDeflectionProfile(
   const w_max =
     PLATE_DEFLECTION_COEFF * (q_side * Math.pow(a, 4)) / D;
 
-  const pts = PLATE_SAMPLE_POINTS.slice(0, nPoints);
+  const pts = SHORT_SAMPLE_POINTS_5.slice(0, nPoints);
 
   const result: { x_in: number; deflection_in: number }[] = [];
 
