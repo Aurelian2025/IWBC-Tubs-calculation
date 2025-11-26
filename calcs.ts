@@ -64,6 +64,7 @@ const PLATE_SAMPLE_POINTS: { u: number; v: number }[] = [
   { u: 1 / 3, v: 0.20 },
   { u: 2 / 3, v: 0.20 },
   { u: 0.95, v: 0.20 }
+ { u: 0.50, v: 0.50 }  // NEW center point
 ];
 // Short-side 5-point layout: 4 near corners + 1 in center
 const SHORT_SAMPLE_POINTS_5: { u: number; v: number }[] = [
