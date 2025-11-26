@@ -84,29 +84,40 @@ export default function Tub3D({
     dir.position.set(1, 2, 1);
     scene.add(dir);
 
-    // Create a text sprite that always faces the camera
-function makeTextLabel(text: string): THREE.Sprite {
-  const fontSize = 48; // resolution, not world size
+   function makeTextLabel(text: string): THREE.Sprite {
+  const fontSize = 64;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d")!;
   canvas.width = 256;
   canvas.height = 128;
 
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // --- NO BACKGROUND FILL ---
+  // ctx.fillStyle = "rgba(255,255,255,0.9)";
+  // ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  // Clear the canvas fully transparent
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw text only
   ctx.font = `${fontSize}px sans-serif`;
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = "black";           // pure black text
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
   const texture = new THREE.CanvasTexture(canvas);
-  const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+  texture.needsUpdate = true;
+
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,      // allow transparent background
+    alphaTest: 0.05         // prevents faint edges
+  });
+
   const sprite = new THREE.Sprite(material);
 
-  // world size of label
-  sprite.scale.set(0.4, 0.2, 1);
+  // world size (makes text small and neat)
+  sprite.scale.set(0.35, 0.15, 1);
 
   return sprite;
 }
