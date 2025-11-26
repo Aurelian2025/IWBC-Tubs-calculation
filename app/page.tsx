@@ -95,9 +95,9 @@ export default function Page() {
 
   const bottom = mdfBottomDeflection(tub, materials);
   const extr = extrusionDeflection(tub, frame, materials);
-const bottomProfile = bottomDeflectionProfile(tub, materials, 10);
+const bottomProfile = bottomDeflectionProfile(tub, materials, 11);
 const shortProfile = shortSideDeflectionProfile(tub, materials, 5);
-const longProfile = longSideDeflectionProfile(tub, materials, 10);
+const longProfile = longSideDeflectionProfile(tub, materials, 11);
 
   return (
     <main
