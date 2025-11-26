@@ -258,7 +258,7 @@ export default function Tub3D({
       ref={mountRef}
       style={{
         width: "100%",
-        height: 300,
+        height: 800,
         border: "1px solid #ccc",
         borderRadius: 8,
         overflow: "hidden"
