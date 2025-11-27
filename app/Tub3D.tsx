@@ -6,32 +6,8 @@ import { TubGeometry } from "../calcs";
 
 type DeflectionPoint = {
   x_in: number;
-  deflection_in: number;
+  deflection_in: number; // inches
 };
-
-// Must match the pattern used in calcs.ts (index order B1…B10 etc.)
-const PLATE_SAMPLE_POINTS: { u: number; v: number }[] = [
-  { u: 0.05, v: 0.80 },
-  { u: 1 / 3, v: 0.80 },
-  { u: 2 / 3, v: 0.80 },
-  { u: 0.95, v: 0.80 },
-
-  { u: 0.15, v: 0.50 },
-  { u: 0.85, v: 0.50 },
-
-  { u: 0.05, v: 0.20 },
-  { u: 1 / 3, v: 0.20 },
-  { u: 2 / 3, v: 0.20 },
-  { u: 0.95, v: 0.20 },
-  { u: 0.50, v: 0.50 }
-];
-const SHORT_SAMPLE_POINTS_5: { u: number; v: number }[] = [
-  { u: 0.05, v: 0.10 },
-  { u: 0.95, v: 0.10 },
-  { u: 0.50, v: 0.50 },
-  { u: 0.05, v: 0.90 },
-  { u: 0.95, v: 0.90 }
-];
 
 type Tub3DProps = {
   tub: TubGeometry;
@@ -40,42 +16,134 @@ type Tub3DProps = {
   longProfile: DeflectionPoint[];
 };
 
-const INCH_TO_WORLD = 0.1; // 10 inches = 1 Three.js unit
+// Same sampling patterns as in calcs.ts
+const PLATE_SAMPLE_POINTS: { u: number; v: number }[] = [
+  { u: 0.05, v: 0.8 },
+  { u: 1 / 3, v: 0.8 },
+  { u: 2 / 3, v: 0.8 },
+  { u: 0.95, v: 0.8 },
 
-export default function Tub3D({
+  { u: 0.15, v: 0.5 },
+  { u: 0.85, v: 0.5 },
+
+  { u: 0.05, v: 0.2 },
+  { u: 1 / 3, v: 0.2 },
+  { u: 2 / 3, v: 0.2 },
+  { u: 0.95, v: 0.2 },
+
+  { u: 0.5, v: 0.5 } // center
+];
+
+const SHORT_SAMPLE_POINTS_5: { u: number; v: number }[] = [
+  { u: 0.05, v: 0.1 },
+  { u: 0.95, v: 0.1 },
+  { u: 0.5, v: 0.5 },
+  { u: 0.05, v: 0.9 },
+  { u: 0.95, v: 0.9 }
+];
+
+function makeTextLabel(text: string, color: string): THREE.Sprite {
+  const fontSize = 64;
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d")!;
+  canvas.width = 256;
+  canvas.height = 128;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = `${fontSize}px sans-serif`;
+  ctx.fillStyle = color;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    alphaTest: 0.05
+  });
+
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(0.7, 0.3, 1); // larger labels
+  return sprite;
+}
+
+const Tub3D: React.FC<Tub3DProps> = ({
   tub,
   bottomProfile,
   shortProfile,
   longProfile
-}: Tub3DProps) {
+}) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
 
-    const width = mount.clientWidth || 800;
-    const height = 800;
+    // Basic sizes in "world units" (feet-ish)
+    const Lw = tub.L_tub_in / 12;
+    const Ww = tub.W_tub_in / 12;
+    const Hw = tub.H_tub_in / 12;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf8f8f8);
+    scene.background = new THREE.Color(0xf0f0f0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(width, height);
+    renderer.setSize(mount.clientWidth || 800, 480);
     mount.appendChild(renderer.domElement);
 
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 5000);
-    const Lw = tub.L_tub_in * INCH_TO_WORLD;
-    const Ww = tub.W_tub_in * INCH_TO_WORLD;
-    const Hw = tub.H_tub_in * INCH_TO_WORLD;
-
-    const initialRadius = Math.max(Lw, Ww, Hw) * 3;
-    camera.position.set(initialRadius, initialRadius, initialRadius);
+    const camera = new THREE.PerspectiveCamera(
+      45,
+      (mount.clientWidth || 800) / 480,
+      0.1,
+      200
+    );
+    const radius0 = Math.max(Lw, Ww, Hw) * 2;
+    camera.position.set(radius0, radius0, radius0);
     camera.lookAt(0, Hw / 2, 0);
 
-    // Simple manual "orbit": rotate a group instead of camera controls
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambient);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+    dir.position.set(1, 2, 1);
+    scene.add(dir);
+
     const tubGroup = new THREE.Group();
     scene.add(tubGroup);
+
+    // Tub walls (wireframe box)
+    const tubGeom = new THREE.BoxGeometry(Lw, Hw, Ww);
+    const tubEdges = new THREE.EdgesGeometry(tubGeom);
+    const tubLines = new THREE.LineSegments(
+      tubEdges,
+      new THREE.LineBasicMaterial({ color: 0x333333 })
+    );
+    tubLines.position.set(0, Hw / 2, 0);
+    tubGroup.add(tubLines);
+
+    // Water plane
+    const waterDepthIn = Math.min(tub.water_freeboard_in, tub.H_tub_in);
+    const waterDepthWorld = (waterDepthIn / 12);
+    const waterY = waterDepthWorld; // from bottom
+    const waterGeom = new THREE.PlaneGeometry(Lw * 0.98, Ww * 0.98);
+    const waterMat = new THREE.MeshPhongMaterial({
+      color: 0x88c8ff,
+      transparent: true,
+      opacity: 0.4,
+      side: THREE.DoubleSide
+    });
+    const waterMesh = new THREE.Mesh(waterGeom, waterMat);
+    waterMesh.rotation.x = -Math.PI / 2;
+    waterMesh.position.set(0, waterY, 0);
+    tubGroup.add(waterMesh);
+
+    // Ground grid
+    const grid = new THREE.GridHelper(Lw * 2, 20, 0xbbbbbb, 0xe0e0e0);
+    grid.position.y = 0;
+    tubGroup.add(grid);
+
     // --- Visual supports: bottom extrusions & wall posts ---
     function addSupports() {
       const supportMat = new THREE.MeshPhongMaterial({
@@ -89,22 +157,19 @@ export default function Tub3D({
       const postSize = Math.min(Lw, Ww) * 0.03;
 
       // 1) Bottom transverse extrusions (beams across width)
-      const nBottomRaw = (tub as any).n_transverse ?? 0;
-      const nBottom = Math.max(0, Number(nBottomRaw));
+      const nBottomRaw = tub.n_transverse ?? 0;
+      const nBottom = Math.max(0, nBottomRaw);
 
       if (nBottom > 0) {
         const extrHeight = Hw * 0.05;
         const xPositions: number[] = [];
 
         if (nBottom === 1) {
-          // One extrusion in the middle
           xPositions.push(0);
         } else if (nBottom === 2) {
-          // Two extrusions at 1/3 and 2/3 of the length (even spacing)
           const left = -Lw / 2;
           xPositions.push(left + Lw / 3, left + (2 * Lw) / 3);
         } else {
-          // 3 or more: evenly spaced from end to end
           const spanLen = Lw;
           const spacingBottom = spanLen / (nBottom - 1);
           for (let i = 0; i < nBottom; i++) {
@@ -122,18 +187,15 @@ export default function Tub3D({
       }
 
       // 2) Posts on long sides (front & back walls)
-      const nLongRaw = (tub as any).n_long_side_posts ?? 0;
-      const nLong = Math.max(0, Number(nLongRaw));
+      const nLongRaw = tub.n_long_side_posts ?? 0;
+      const nLong = Math.max(0, nLongRaw);
       if (nLong > 0) {
         const spanL = Lw;
         const spacingL = spanL / (nLong + 1);
-
-        // Put them just OUTSIDE the front/back walls so they're visible
-        const zOffset = Ww / 2 + postSize / 2;
+        const zOffset = Ww / 2 + postSize / 2; // outside front/back
 
         for (let i = 1; i <= nLong; i++) {
           const x = -Lw / 2 + i * spacingL;
-
           [-zOffset, zOffset].forEach((z) => {
             const geom = new THREE.BoxGeometry(postSize, postHeight, postSize);
             const mesh = new THREE.Mesh(geom, supportMat);
@@ -144,18 +206,15 @@ export default function Tub3D({
       }
 
       // 3) Posts on short sides (left & right walls)
-      const nShortRaw = (tub as any).n_short_side_posts ?? 0;
-      const nShort = Math.max(0, Number(nShortRaw));
+      const nShortRaw = tub.n_short_side_posts ?? 0;
+      const nShort = Math.max(0, nShortRaw);
       if (nShort > 0) {
         const spanW = Ww;
         const spacingW = spanW / (nShort + 1);
-
-        // Put them just OUTSIDE the left/right walls
-        const xOffset = Lw / 2 + postSize / 2;
+        const xOffset = Lw / 2 + postSize / 2; // outside left/right
 
         for (let i = 1; i <= nShort; i++) {
           const z = -Ww / 2 + i * spacingW;
-
           [-xOffset, xOffset].forEach((x) => {
             const geom = new THREE.BoxGeometry(postSize, postHeight, postSize);
             const mesh = new THREE.Mesh(geom, supportMat);
@@ -166,216 +225,167 @@ export default function Tub3D({
       }
     }
 
-    // Lights
-    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambient);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.7);
-    dir.position.set(1, 2, 1);
-    scene.add(dir);
-
-  function makeTextLabel(text: string, color: string): THREE.Sprite {
-  const fontSize = 64;
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d")!;
-  canvas.width = 256;
-  canvas.height = 128;
-
-  // Transparent background
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Draw text using the passed color
-  ctx.font = `${fontSize}px sans-serif`;
-  ctx.fillStyle = color;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.needsUpdate = true;
-
-  const material = new THREE.SpriteMaterial({
-    map: texture,
-    transparent: true,
-    alphaTest: 0.05
-  });
-
-  const sprite = new THREE.Sprite(material);
-  sprite.scale.set(0.7, 0.3, 1);
-  return sprite;
-}
-
-
-    // Tub wireframe (inner volume)
-    const boxGeom = new THREE.BoxGeometry(Lw, Hw, Ww);
-    const edges = new THREE.EdgesGeometry(boxGeom);
-    const lineMat = new THREE.LineBasicMaterial({ color: 0x333333 });
-    const box = new THREE.LineSegments(edges, lineMat);
-    box.position.set(0, Hw / 2, 0);
-    tubGroup.add(box);
-
-    // Water surface plane
-    const hWaterIn = Math.min(tub.water_freeboard_in, tub.H_tub_in);
-    const hWaterWorld = hWaterIn * INCH_TO_WORLD;
-    const waterFrac = Math.max(0, Math.min(1, hWaterWorld / Hw));
-    const waterY = waterFrac * Hw;
-
-    const waterGeom = new THREE.PlaneGeometry(Lw, Ww);
-    const waterMat = new THREE.MeshPhongMaterial({
-      color: 0x82a9ff,
-      transparent: true,
-      opacity: 0.6,
-      side: THREE.DoubleSide
-    });
-    const water = new THREE.Mesh(waterGeom, waterMat);
-    water.rotation.x = -Math.PI / 2;
-    water.position.set(0, waterY, 0);
-    tubGroup.add(water);
-
-    // Floor grid (optional)
-    const grid = new THREE.GridHelper(Lw * 2, 20, 0xbbbbbb, 0xe0e0e0);
-    grid.position.y = 0;
-    tubGroup.add(grid);
-
-        // Add visual supports based on tub geometry
     addSupports();
 
-      
-      // 3) Posts on short sides (left & right walls)
-      const nShortRaw = tub.n_short_side_posts ?? 0;
-      const nShort = nShortRaw > 0 ? nShortRaw : 0;
-      if (nShort > 0) {
-        const spanW = Ww;
-        const spacingW = spanW / (nShort + 1);
-
-        for (let i = 1; i <= nShort; i++) {
-          const z = -Ww / 2 + i * spacingW;
-
-          [-Lw / 2, Lw / 2].forEach((x) => {
-            const geom = new THREE.BoxGeometry(postSize, postHeight, postSize);
-            const mesh = new THREE.Mesh(geom, supportMat);
-            mesh.position.set(x, postHeight / 2, z);
-            tubGroup.add(mesh);
-          });
-        }
-      }
-    }
-
-    // Helper for spheres on each face
+    // Helper to add deflection spheres & labels
     function addDeflectionPoints(
       profile: DeflectionPoint[],
       color: number,
       face: "bottom" | "front" | "right"
     ) {
-      const maxDef =
-        profile.reduce(
-          (m, p) => Math.max(m, Math.abs(p.deflection_in)),
-          1e-6
-        ) || 1e-6;
+      const maxDef = Math.max(...profile.map((p) => Math.abs(p.deflection_in)), 1e-6);
+      const baseRadius = Math.min(Lw, Ww, Hw) * 0.02;
+      const extraRadius = baseRadius * 3;
 
       profile.forEach((p, idx) => {
-    let uv;
-    if (face === "right") {
-      // short side: 5-point layout
-      uv =
-        SHORT_SAMPLE_POINTS_5[idx] ??
-        SHORT_SAMPLE_POINTS_5[SHORT_SAMPLE_POINTS_5.length - 1];
-    } else {
-      // bottom and long side (front) use the 10-point pattern
-      uv =
-        PLATE_SAMPLE_POINTS[idx] ??
-        PLATE_SAMPLE_POINTS[PLATE_SAMPLE_POINTS.length - 1];
-    }
+        let u = 0.5;
+        let v = 0.5;
 
-    const u = uv.u;
-    const v = uv.v;
+        if (face === "bottom" || face === "front") {
+          const uv = PLATE_SAMPLE_POINTS[idx] ?? { u: 0.5, v: 0.5 };
+          u = uv.u;
+          v = uv.v;
+        } else {
+          const uv = SHORT_SAMPLE_POINTS_5[idx] ?? { u: 0.5, v: 0.5 };
+          u = uv.u;
+          v = uv.v;
+        }
 
-    let x = 0,
-      y = 0,
-      z = 0;
+        let x = 0;
+        let y = 0;
+        let z = 0;
 
-    if (face === "bottom") {
-      x = (u - 0.5) * Lw;
-      z = (v - 0.5) * Ww;
-      y = 0;
-    } else if (face === "front") {
-      x = (u - 0.5) * Lw;
-      y = v * Hw;
-      z = -Ww / 2;
-    } else if (face === "right") {
-      x = Lw / 2;
-      y = v * Hw;
-      z = (u - 0.5) * Ww;
-    }
+        if (face === "bottom") {
+          x = (u - 0.5) * Lw;
+          y = 0.02;
+          z = (v - 0.5) * Ww;
+        } else if (face === "front") {
+          x = (u - 0.5) * Lw;
+          y = v * Hw;
+          z = -Ww / 2;
+        } else {
+          x = Lw / 2;
+          y = v * Hw;
+          z = (u - 0.5) * Ww;
+        }
 
-        const frac = Math.abs(p.deflection_in) / maxDef;
-        const radius = 0.02 * (1 + 2 * frac) * Math.max(Lw, Ww, Hw);
+        const norm = Math.abs(p.deflection_in) / maxDef;
+        const radius = baseRadius + norm * extraRadius;
 
         const geom = new THREE.SphereGeometry(radius, 16, 16);
         const mat = new THREE.MeshPhongMaterial({ color });
         const sphere = new THREE.Mesh(geom, mat);
         sphere.position.set(x, y, z);
         tubGroup.add(sphere);
-        // ADD LABEL HERE
-let labelText = "";
-let labelColor = "";
 
-if (face === "bottom") {
-  labelText = `B${idx + 1}`;
-  labelColor = "#660000";  // dark red
-} else if (face === "front") {
-  labelText = `L${idx + 1}`;
-  labelColor = "#000066";  // dark blue
-} else {
-  labelText = `S${idx + 1}`;
-  labelColor = "#004400";  // dark green
-}
+        // label
+        let labelText = "";
+        let labelColor = "";
+        if (face === "bottom") {
+          labelText = `B${idx + 1}`;
+          labelColor = "#660000";
+        } else if (face === "front") {
+          labelText = `L${idx + 1}`;
+          labelColor = "#000066";
+        } else {
+          labelText = `S${idx + 1}`;
+          labelColor = "#004400";
+        }
 
-const label = makeTextLabel(labelText, labelColor);
-label.position.set(x + radius * 1.5, y + radius * 1.5, z);
-tubGroup.add(label);
-
+        const label = makeTextLabel(labelText, labelColor);
+        label.position.set(x + radius * 1.5, y + radius * 1.5, z);
+        tubGroup.add(label);
       });
     }
 
-        // Add points: Bottom (red), Long/front (blue), Short/right (green)
-    addDeflectionPoints(bottomProfile, 0xdd0000, "bottom");
-    addDeflectionPoints(longProfile, 0x0000dd, "front");
-    addDeflectionPoints(shortProfile, 0x00aa00, "right");
+    // Add bottom, short, long points
+    addDeflectionPoints(bottomProfile, 0xcc0000, "bottom");
+    addDeflectionPoints(longProfile, 0x0000cc, "front");
+    addDeflectionPoints(shortProfile, 0x008800, "right");
 
-    // Manual rotation & zoom
+    // Simple mouse controls (rotate + pan + wheel zoom)
     let isDragging = false;
+    let isPanning = false;
     let prevX = 0;
     let prevY = 0;
-    let currentRadius = initialRadius;
+    let currentRadius = radius0;
+
+    const center = new THREE.Vector3(0, Hw / 2, 0);
+
+    function updateCameraFromAngles(theta: number, phi: number) {
+      const r = currentRadius;
+      const x = center.x + r * Math.sin(phi) * Math.cos(theta);
+      const y = center.y + r * Math.cos(phi);
+      const z = center.z + r * Math.sin(phi) * Math.sin(theta);
+      camera.position.set(x, y, z);
+      camera.lookAt(center);
+    }
+
+    let theta = Math.PI / 4;
+    let phi = Math.PI / 4;
+
+    updateCameraFromAngles(theta, phi);
 
     const onMouseDown = (event: MouseEvent) => {
-      isDragging = true;
+      const rect = renderer.domElement.getBoundingClientRect();
+      if (
+        event.clientX < rect.left ||
+        event.clientX > rect.right ||
+        event.clientY < rect.top ||
+        event.clientY > rect.bottom
+      ) {
+        return;
+      }
+      event.preventDefault();
+      if (event.button === 2 || event.ctrlKey) {
+        isPanning = true;
+      } else {
+        isDragging = true;
+      }
       prevX = event.clientX;
       prevY = event.clientY;
     };
 
     const onMouseMove = (event: MouseEvent) => {
-      if (!isDragging) return;
+      if (!isDragging && !isPanning) return;
       const dx = event.clientX - prevX;
       const dy = event.clientY - prevY;
       prevX = event.clientX;
       prevY = event.clientY;
 
-      const rotSpeed = 0.005;
-      tubGroup.rotation.y += dx * rotSpeed;
-      tubGroup.rotation.x += dy * rotSpeed;
-      tubGroup.rotation.x = Math.max(
-        -Math.PI / 2,
-        Math.min(Math.PI / 2, tubGroup.rotation.x)
-      );
+      if (isDragging) {
+        const rotSpeed = 0.005;
+        theta -= dx * rotSpeed;
+        phi -= dy * rotSpeed;
+        const eps = 0.1;
+        phi = Math.max(eps, Math.min(Math.PI - eps, phi));
+        updateCameraFromAngles(theta, phi);
+      } else if (isPanning) {
+        const panSpeed = 0.002 * currentRadius;
+        const offsetX = -dx * panSpeed;
+        const offsetY = dy * panSpeed;
+        center.x += offsetX;
+        center.y += offsetY;
+        updateCameraFromAngles(theta, phi);
+      }
     };
 
     const onMouseUp = () => {
       isDragging = false;
+      isPanning = false;
     };
 
     const onWheel = (event: WheelEvent) => {
-      event.preventDefault(); // stop page from scrolling
+      const rect = renderer.domElement.getBoundingClientRect();
+      if (
+        event.clientX < rect.left ||
+        event.clientX > rect.right ||
+        event.clientY < rect.top ||
+        event.clientY > rect.bottom
+      ) {
+        return;
+      }
+      event.preventDefault();
       const delta = event.deltaY;
       const zoomFactor = 1.05;
       if (delta > 0) {
@@ -383,53 +393,32 @@ tubGroup.add(label);
       } else {
         currentRadius /= zoomFactor;
       }
-      const dir = new THREE.Vector3(
-        camera.position.x,
-        camera.position.y,
-        camera.position.z
-      )
-        .sub(new THREE.Vector3(0, Hw / 2, 0))
-        .normalize();
-      camera.position.copy(
-        new THREE.Vector3(0, Hw / 2, 0).add(dir.multiplyScalar(currentRadius))
+      currentRadius = Math.max(
+        Math.max(Lw, Ww, Hw) * 0.8,
+        Math.min(currentRadius, Math.max(Lw, Ww, Hw) * 10)
       );
+      updateCameraFromAngles(theta, phi);
     };
 
-    renderer.domElement.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
-   renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
+    renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
 
     let animationFrameId: number;
-
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
       renderer.render(scene, camera);
     };
     animate();
 
-    const handleResize = () => {
-      const newWidth = mount.clientWidth || width;
-      const newHeight = height;
-      renderer.setSize(newWidth, newHeight);
-      camera.aspect = newWidth / newHeight;
-      camera.updateProjectionMatrix();
-    };
-
-    window.addEventListener("resize", handleResize);
-
     return () => {
-      window.removeEventListener("resize", handleResize);
-      renderer.domElement.removeEventListener("mousedown", onMouseDown);
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
       renderer.domElement.removeEventListener("wheel", onWheel);
-      window.removeEventListener("resize", handleResize);
-      cancelAnimationFrame(animationFrameId);
-      renderer.dispose();
-      if (mount.contains(renderer.domElement)) {
-        mount.removeChild(renderer.domElement);
-      }
+      mount.removeChild(renderer.domElement);
     };
   }, [tub, bottomProfile, shortProfile, longProfile]);
 
@@ -438,11 +427,14 @@ tubGroup.add(label);
       ref={mountRef}
       style={{
         width: "100%",
-        height: 800,
-        border: "1px solid #ccc",
+        height: "480px",
+        border: "1px solid #ddd",
         borderRadius: 8,
-        overflow: "hidden"
+        overflow: "hidden",
+        background: "#ffffff"
       }}
     />
   );
-}
+};
+
+export default Tub3D;
