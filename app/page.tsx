@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import materialDefaults from "../materials.json";
 import defaultTubConfig from "../defaultTub.json";
+import iwbcLogo from "./iwbc-logo.jpg";
 
 import {
   MaterialsConfig,
@@ -90,9 +91,17 @@ export default function Page() {
         fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
       }}
     >
-      <h1 style={{ fontSize: "1.8rem", marginBottom: "1rem" }}>
-        MDF Tub Deflection Calculator
-      </h1>
+     <div style={{ display: "flex", alignItems: "center", marginBottom: "1.5rem" }}>
+  <img
+    src={iwbcLogo.src}
+    alt="Ice Works Bath Co Logo"
+    style={{ width: "80px", height: "80px", marginRight: "1rem" }}
+  />
+  <h1 style={{ fontSize: "1.8rem", margin: 0 }}>
+    Ice Works Bath Co Tub Deflection Calculator
+  </h1>
+</div>
+
 
       {/* Layout: left = tub dims, right = supports & water */}
       <div
@@ -260,6 +269,18 @@ export default function Page() {
           ))}
         </div>
       </div>
+<div
+  style={{
+    marginTop: "3rem",
+    textAlign: "center",
+    fontSize: "0.75rem",
+    color: "#666",
+    letterSpacing: "0.5px"
+  }}
+>
+  ICE WORKS BATH CO © 2025. ALL RIGHTS RESERVED.
+</div>
+
     </main>
   );
 }
