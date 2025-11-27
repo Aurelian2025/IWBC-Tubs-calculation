@@ -227,15 +227,21 @@ const Tub3D: React.FC<Tub3DProps> = ({
 
     addSupports();
 
-    // Helper to add deflection spheres & labels
+       // Helper to add deflection spheres & labels
     function addDeflectionPoints(
       profile: DeflectionPoint[],
       color: number,
       face: "bottom" | "front" | "right"
     ) {
-      const maxDef = Math.max(...profile.map((p) => Math.abs(p.deflection_in)), 1e-6);
-      const baseRadius = Math.min(Lw, Ww, Hw) * 0.02;
-      const extraRadius = baseRadius * 3;
+      // work in mm so this matches the legend values exactly
+      const maxDefMm = Math.max(
+        ...profile.map((p) => Math.abs(p.deflection_in * 25.4)),
+        1e-6
+      );
+
+      // smaller base, larger extra → more visible difference
+      const baseRadius = Math.min(Lw, Ww, Hw) * 0.01;
+      const extraRadius = baseRadius * 6;
 
       profile.forEach((p, idx) => {
         let u = 0.5;
@@ -269,7 +275,8 @@ const Tub3D: React.FC<Tub3DProps> = ({
           z = (u - 0.5) * Ww;
         }
 
-        const norm = Math.abs(p.deflection_in) / maxDef;
+        const defMm = Math.abs(p.deflection_in * 25.4);
+        const norm = defMm / maxDefMm;
         const radius = baseRadius + norm * extraRadius;
 
         const geom = new THREE.SphereGeometry(radius, 16, 16);
@@ -297,6 +304,7 @@ const Tub3D: React.FC<Tub3DProps> = ({
         tubGroup.add(label);
       });
     }
+
 
     // Add bottom, short, long points
     addDeflectionPoints(bottomProfile, 0xcc0000, "bottom");
