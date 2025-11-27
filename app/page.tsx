@@ -16,7 +16,7 @@ import {
 } from "../calcs";
 
 import Tub3D from "./Tub3D";
-import iwbcLogo from "./iwbc-logo.jpg"; // change to .png if needed
+import iwbcLogo from "./iwbc-logo.jpg.jpg"; // change to .png if needed
 
 type LabelInputProps = {
   label: string;
