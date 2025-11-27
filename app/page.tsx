@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import materialDefaults from "../materials.json";
 import defaultTubConfig from "../defaultTub.json";
-import iwbcLogo from "./iwbc-logo.jpg.jpg";
 
 import {
   MaterialsConfig,
@@ -17,6 +16,7 @@ import {
 } from "../calcs";
 
 import Tub3D from "./Tub3D";
+import iwbcLogo from "./iwbc-logo.jpg"; // change to .png if needed
 
 type LabelInputProps = {
   label: string;
@@ -27,14 +27,16 @@ type LabelInputProps = {
 function LabelInput({ label, value, onChange }: LabelInputProps) {
   return (
     <label style={{ display: "block", marginBottom: "0.5rem" }}>
-      <div style={{ fontSize: "0.85rem", marginBottom: "0.15rem" }}>{label}</div>
-            <input
+      <div style={{ fontSize: "0.85rem", marginBottom: "0.15rem" }}>
+        {label}
+      </div>
+      <input
         type="number"
         value={Number.isFinite(value) ? value : ""}
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
         style={{
           padding: "0.25rem 0.4rem",
-          width: "8rem",               // ~1/3 column width
+          width: "8rem", // narrower inputs
           boxSizing: "border-box"
         }}
       />
@@ -47,11 +49,13 @@ const INCH_TO_MM = 25.4;
 export default function Page() {
   const materials = materialDefaults.materials as MaterialsConfig;
 
-  const [tub, setTub] = useState<TubGeometry>(defaultTubConfig.tub as TubGeometry);
-  // Frame is still used for extrusionDeflection, but no UI controls
-  const [frame] = useState<FrameGeometry>(defaultTubConfig.frame as FrameGeometry);
+  const [tub, setTub] = useState<TubGeometry>(
+    defaultTubConfig.tub as TubGeometry
+  );
+  const [frame] = useState<FrameGeometry>(
+    defaultTubConfig.frame as FrameGeometry
+  );
 
-  // --- Calculations ---
   const bottom = mdfBottomDeflection(tub, materials);
   const extr = extrusionDeflection(tub, frame, materials);
 
@@ -59,7 +63,6 @@ export default function Page() {
   const shortProfile = shortSideDeflectionProfile(tub, materials, 5);
   const longProfile = longSideDeflectionProfile(tub, materials, 11);
 
-  // Legend lines (for both 2D and 3D; we now only show them in 3D overlay)
   const legend3DLines: string[] = [];
 
   legend3DLines.push("Bottom δ (mm):");
@@ -91,23 +94,29 @@ export default function Page() {
         fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
       }}
     >
-     <div style={{ display: "flex", alignItems: "center", marginBottom: "1.5rem" }}>
-  <img
-    src={iwbcLogo.src}
-    alt="Ice Works Bath Co Logo"
-    style={{ width: "80px", height: "80px", marginRight: "1rem" }}
-  />
-  <h1 style={{ fontSize: "1.8rem", margin: 0 }}>
-    Ice Works Bath Co Tub Deflection Calculator
-  </h1>
-</div>
+      {/* Logo + Title */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          marginBottom: "1.5rem"
+        }}
+      >
+        <img
+          src={iwbcLogo.src}
+          alt="Ice Works Bath Co Logo"
+          style={{ width: "80px", height: "80px", marginRight: "1rem" }}
+        />
+        <h1 style={{ fontSize: "1.8rem", margin: 0 }}>
+          Ice Works Bath Co Tub Deflection Calculator
+        </h1>
+      </div>
 
-
-            {/* Top layout: left = inputs, right = 3D view */}
+      {/* Top layout: left = inputs, right = 3D view */}
       <div
         style={{
           display: "grid",
-           gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 3.2fr)",
+          gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 3.2fr)",
           gap: "1.5rem",
           alignItems: "flex-start",
           marginBottom: "2rem"
@@ -242,7 +251,7 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Basic numeric summary for bottom and frame */}
+      {/* Summary at the bottom */}
       <section style={{ marginBottom: "2rem" }}>
         <h2 style={{ fontSize: "1.2rem", marginBottom: "0.5rem" }}>
           Summary (Center Max Values)
@@ -263,7 +272,9 @@ export default function Page() {
             }}
           >
             <strong>Bottom MDF Panel</strong>
-            <div>Max δ (mm): {(bottom.delta_max * INCH_TO_MM).toFixed(3)}</div>
+            <div>
+              Max δ (mm): {(bottom.delta_max * INCH_TO_MM).toFixed(3)}
+            </div>
             <div>Max σ (psi): {bottom.sigma_max.toFixed(1)}</div>
           </div>
           <div
@@ -274,69 +285,26 @@ export default function Page() {
             }}
           >
             <strong>Frame Extrusions</strong>
-            <div>Max δ (mm): {(extr.delta_max * INCH_TO_MM).toFixed(3)}</div>
+            <div>
+              Max δ (mm): {(extr.delta_max * INCH_TO_MM).toFixed(3)}
+            </div>
             <div>Max σ (psi): {extr.sigma_max.toFixed(1)}</div>
           </div>
         </div>
       </section>
 
-     
-        {/* Instructions overlay */}
-        <div
-          style={{
-            position: "absolute",
-            top: 8,
-            left: 8,
-            background: "rgba(255,255,255,0.85)",
-            border: "1px solid #ccc",
-            borderRadius: 6,
-            padding: "4px 8px",
-            fontSize: "0.75rem",
-            lineHeight: 1.3,
-            maxWidth: 240
-          }}
-        >
-          <strong>3D Controls:</strong>
-          <br />
-          • Zoom: mouse wheel
-          <br />
-          • Rotate: left-click + drag
-          <br />
-          • Pan: right-click or Ctrl + drag
-        </div>
-
-        {/* Legend overlay in top-right corner */}
-        <div
-          style={{
-            position: "absolute",
-            top: 8,
-            right: 8,
-            background: "rgba(255,255,255,0.85)",
-            border: "1px solid #ccc",
-            borderRadius: 6,
-            padding: "6px 10px",
-            fontSize: "0.75rem",
-            lineHeight: 1.3,
-            maxWidth: 220
-          }}
-        >
-          {legend3DLines.map((line, idx) => (
-            <div key={idx}>{line === "" ? <span>&nbsp;</span> : line}</div>
-          ))}
-        </div>
+      {/* Footer */}
+      <div
+        style={{
+          marginTop: "3rem",
+          textAlign: "center",
+          fontSize: "0.75rem",
+          color: "#666",
+          letterSpacing: "0.5px"
+        }}
+      >
+        ICE WORKS BATH CO © 2025. ALL RIGHTS RESERVED.
       </div>
-<div
-  style={{
-    marginTop: "3rem",
-    textAlign: "center",
-    fontSize: "0.75rem",
-    color: "#666",
-    letterSpacing: "0.5px"
-  }}
->
-  ICE WORKS BATH CO © 2025. ALL RIGHTS RESERVED.
-</div>
-
     </main>
   );
 }
