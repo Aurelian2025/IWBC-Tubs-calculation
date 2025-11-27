@@ -76,6 +76,95 @@ export default function Tub3D({
     // Simple manual "orbit": rotate a group instead of camera controls
     const tubGroup = new THREE.Group();
     scene.add(tubGroup);
+    // --- Visual supports: bottom extrusions & wall posts ---
+    function addSupports() {
+      const supportMat = new THREE.MeshPhongMaterial({
+        color: 0x777777,
+        transparent: true,
+        opacity: 0.4
+      });
+
+      const bottomY = 0;
+      const postHeight = Hw; // full tub height
+      const postSize = Math.min(Lw, Ww) * 0.03;
+
+      // 1) Bottom transverse extrusions (beams across width)
+      const nBottomRaw = (tub as any).n_transverse ?? 0;
+      const nBottom = Math.max(0, Number(nBottomRaw));
+
+      if (nBottom > 0) {
+        const extrHeight = Hw * 0.05;
+        const xPositions: number[] = [];
+
+        if (nBottom === 1) {
+          // One extrusion in the middle
+          xPositions.push(0);
+        } else if (nBottom === 2) {
+          // Two extrusions at 1/3 and 2/3 of the length (even spacing)
+          const left = -Lw / 2;
+          xPositions.push(left + Lw / 3, left + (2 * Lw) / 3);
+        } else {
+          // 3 or more: evenly spaced from end to end
+          const spanLen = Lw;
+          const spacingBottom = spanLen / (nBottom - 1);
+          for (let i = 0; i < nBottom; i++) {
+            const x = -Lw / 2 + i * spacingBottom;
+            xPositions.push(x);
+          }
+        }
+
+        xPositions.forEach((x) => {
+          const geom = new THREE.BoxGeometry(postSize, extrHeight, Ww);
+          const mesh = new THREE.Mesh(geom, supportMat);
+          mesh.position.set(x, bottomY - extrHeight / 2, 0);
+          tubGroup.add(mesh);
+        });
+      }
+
+      // 2) Posts on long sides (front & back walls)
+      const nLongRaw = (tub as any).n_long_side_posts ?? 0;
+      const nLong = Math.max(0, Number(nLongRaw));
+      if (nLong > 0) {
+        const spanL = Lw;
+        const spacingL = spanL / (nLong + 1);
+
+        // Put them just OUTSIDE the front/back walls so they're visible
+        const zOffset = Ww / 2 + postSize / 2;
+
+        for (let i = 1; i <= nLong; i++) {
+          const x = -Lw / 2 + i * spacingL;
+
+          [-zOffset, zOffset].forEach((z) => {
+            const geom = new THREE.BoxGeometry(postSize, postHeight, postSize);
+            const mesh = new THREE.Mesh(geom, supportMat);
+            mesh.position.set(x, postHeight / 2, z);
+            tubGroup.add(mesh);
+          });
+        }
+      }
+
+      // 3) Posts on short sides (left & right walls)
+      const nShortRaw = (tub as any).n_short_side_posts ?? 0;
+      const nShort = Math.max(0, Number(nShortRaw));
+      if (nShort > 0) {
+        const spanW = Ww;
+        const spacingW = spanW / (nShort + 1);
+
+        // Put them just OUTSIDE the left/right walls
+        const xOffset = Lw / 2 + postSize / 2;
+
+        for (let i = 1; i <= nShort; i++) {
+          const z = -Ww / 2 + i * spacingW;
+
+          [-xOffset, xOffset].forEach((x) => {
+            const geom = new THREE.BoxGeometry(postSize, postHeight, postSize);
+            const mesh = new THREE.Mesh(geom, supportMat);
+            mesh.position.set(x, postHeight / 2, z);
+            tubGroup.add(mesh);
+          });
+        }
+      }
+    }
 
     // Lights
     const ambient = new THREE.AmbientLight(0xffffff, 0.8);
