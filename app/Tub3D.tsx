@@ -91,12 +91,12 @@ const Tub3D: React.FC<Tub3DProps> = ({
     scene.background = new THREE.Color(0xf0f0f0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(mount.clientWidth || 800, 480);
+    renderer.setSize(mount.clientWidth || 800, 560);
     mount.appendChild(renderer.domElement);
 
     const camera = new THREE.PerspectiveCamera(
       45,
-      (mount.clientWidth || 800) / 480,
+      (mount.clientWidth || 800) / 560,
       0.1,
       200
     );
@@ -427,7 +427,7 @@ const Tub3D: React.FC<Tub3DProps> = ({
       ref={mountRef}
       style={{
         width: "100%",
-        height: "480px",
+        height: "560px",
         border: "1px solid #ddd",
         borderRadius: 8,
         overflow: "hidden",
