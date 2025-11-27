@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import materialDefaults from "../materials.json";
 import defaultTubConfig from "../defaultTub.json";
-import iwbcLogo from "../iwbc-logo.jpg";
+import iwbcLogo from "./iwbc-logo.jpg";
 
 import {
   MaterialsConfig,
