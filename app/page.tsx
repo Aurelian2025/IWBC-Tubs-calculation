@@ -26,7 +26,10 @@ type LabelInputProps = {
 
 function LabelInput({ label, value, onChange }: LabelInputProps) {
   return (
-    <label style={{ display: "block", marginBottom: "0.5rem" }}>
+    <label
+  className="label-input"
+  style={{ display: "block", marginBottom: "0.5rem" }}
+>
       <div style={{ fontSize: "0.85rem", marginBottom: "0.15rem" }}>
         {label}
       </div>
@@ -114,16 +117,18 @@ export default function Page() {
 
       {/* Top layout: left = inputs, right = 3D view */}
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 3.2fr)",
-          gap: "1.5rem",
-          alignItems: "flex-start",
-          marginBottom: "2rem"
-        }}
-      >
+  className="layout-grid"
+  style={{
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 3.2fr)",
+    gap: "1.5rem",
+    alignItems: "flex-start",
+    marginBottom: "2rem"
+  }}
+>
+
         {/* LEFT COLUMN: Inputs */}
-        <div>
+       <div className="inputs-col">
           {/* Tub Geometry */}
           <section style={{ marginBottom: "1.5rem" }}>
             <h2 style={{ fontSize: "1.2rem", marginBottom: "0.5rem" }}>
@@ -185,12 +190,13 @@ export default function Page() {
         </div>
 
         {/* RIGHT COLUMN: 3D Interactive View */}
-        <div>
+        <div className="tub3d-col">
           <h2 style={{ marginTop: 0, marginBottom: "0.3rem" }}>
             3D Interactive View
           </h2>
 
           <div
+            className="tub3d-container"
             style={{
               position: "relative",
               marginTop: "0.5rem",
