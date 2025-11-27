@@ -86,7 +86,7 @@ export default function Page() {
     <main
       style={{
         padding: "2rem",
-        maxWidth: "1200px",
+        maxWidth: "1400px",
         margin: "0 auto",
         fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
       }}
@@ -107,7 +107,7 @@ export default function Page() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2.5fr)",
+           gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 3.2fr)",
           gap: "1.5rem",
           alignItems: "flex-start",
           marginBottom: "2rem"
@@ -280,19 +280,7 @@ export default function Page() {
         </div>
       </section>
 
-      {/* 3D View ONLY (Deflection Visualization SVG removed) */}
-      <h2 style={{ marginTop: "0.5rem", marginBottom: "0.3rem" }}>
-        3D Interactive View
-      </h2>
-
-      <div style={{ position: "relative", marginTop: "0.5rem" }}>
-        <Tub3D
-          tub={tub}
-          bottomProfile={bottomProfile}
-          shortProfile={shortProfile}
-          longProfile={longProfile}
-        />
-
+     
         {/* Instructions overlay */}
         <div
           style={{
