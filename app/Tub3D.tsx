@@ -147,6 +147,71 @@ export default function Tub3D({
     grid.position.y = 0;
     tubGroup.add(grid);
 
+        // Add visual supports based on tub geometry
+    addSupports();
+
+        // --- Visual supports: bottom extrusions & wall posts ---
+    function addSupports() {
+      const supportMat = new THREE.MeshPhongMaterial({ color: 0x555555 });
+
+      const bottomY = 0;
+      const postHeight = Hw * 0.4;
+      const postSize = Math.min(Lw, Ww) * 0.03;
+
+      // 1) Bottom transverse extrusions (beams across width)
+      const nBottom = Math.max(2, tub.n_transverse ?? 2);
+      const spanLen = Lw;
+      const spacingBottom = spanLen / (nBottom - 1);
+
+      for (let i = 0; i < nBottom; i++) {
+        const x = -Lw / 2 + i * spacingBottom;
+        const extrHeight = Hw * 0.05;
+
+        const geom = new THREE.BoxGeometry(postSize, extrHeight, Ww);
+        const mesh = new THREE.Mesh(geom, supportMat);
+        mesh.position.set(x, bottomY - extrHeight / 2, 0);
+        tubGroup.add(mesh);
+      }
+
+      // 2) Posts on long sides (front & back walls)
+      const nLongRaw = tub.n_long_side_posts ?? 0;
+      const nLong = nLongRaw > 0 ? nLongRaw : 0;
+      if (nLong > 0) {
+        const spanL = Lw;
+        const spacingL = spanL / (nLong + 1);
+
+        for (let i = 1; i <= nLong; i++) {
+          const x = -Lw / 2 + i * spacingL;
+
+          [-Ww / 2, Ww / 2].forEach((z) => {
+            const geom = new THREE.BoxGeometry(postSize, postHeight, postSize);
+            const mesh = new THREE.Mesh(geom, supportMat);
+            mesh.position.set(x, postHeight / 2, z);
+            tubGroup.add(mesh);
+          });
+        }
+      }
+
+      // 3) Posts on short sides (left & right walls)
+      const nShortRaw = tub.n_short_side_posts ?? 0;
+      const nShort = nShortRaw > 0 ? nShortRaw : 0;
+      if (nShort > 0) {
+        const spanW = Ww;
+        const spacingW = spanW / (nShort + 1);
+
+        for (let i = 1; i <= nShort; i++) {
+          const z = -Ww / 2 + i * spacingW;
+
+          [-Lw / 2, Lw / 2].forEach((x) => {
+            const geom = new THREE.BoxGeometry(postSize, postHeight, postSize);
+            const mesh = new THREE.Mesh(geom, supportMat);
+            mesh.position.set(x, postHeight / 2, z);
+            tubGroup.add(mesh);
+          });
+        }
+      }
+    }
+
     // Helper for spheres on each face
     function addDeflectionPoints(
       profile: DeflectionPoint[],
