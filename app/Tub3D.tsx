@@ -175,11 +175,12 @@ const postSize = Math.min(Lw, Ww) * 0.03;
       if (nBottom === 1) {
         // One extrusion in the middle
         xPositions.push(0);
-      } else if (nBottom === 2) {
-        // Two extrusions at 1/3 from the ends
-        const offset = Lw / 3;
-        xPositions.push(-offset, offset);
-      } else {
+     } else if (nBottom === 2) {
+  // Two extrusions at 1/3 and 2/3 of the length (even spacing)
+  const left = -Lw / 2;
+  xPositions.push(left + Lw / 3, left + (2 * Lw) / 3);
+} else {
+
         // 3 or more: evenly spaced from end to end
         const spanLen = Lw;
         const spacingBottom = spanLen / (nBottom - 1);
