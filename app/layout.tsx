@@ -1,3 +1,4 @@
+import "./globals.css";
 export const metadata = {
   title: "IWBC Tub Deflection Calculator",
   description: "Deflection calculator for MDF tub and 2525 extrusion frame"
