@@ -107,7 +107,7 @@ export default function Page() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)",
+          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2.5fr)",
           gap: "1.5rem",
           alignItems: "flex-start",
           marginBottom: "2rem"
@@ -185,7 +185,7 @@ export default function Page() {
             style={{
               position: "relative",
               marginTop: "0.5rem",
-              height: "480px"
+              height: "560px"
             }}
           >
             <Tub3D
