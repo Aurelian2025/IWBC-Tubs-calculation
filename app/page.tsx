@@ -193,7 +193,6 @@ export default function Page() {
             }}
           >
             <strong>Bottom MDF Panel</strong>
-            <div>Span a (in): {bottom.span.toFixed(2)}</div>
             <div>Max δ (mm): {(bottom.delta_max * INCH_TO_MM).toFixed(3)}</div>
             <div>Max σ (psi): {bottom.sigma_max.toFixed(1)}</div>
           </div>
@@ -205,7 +204,6 @@ export default function Page() {
             }}
           >
             <strong>Frame Extrusions</strong>
-            <div>Span (in): {extr.span.toFixed(2)}</div>
             <div>Max δ (mm): {(extr.delta_max * INCH_TO_MM).toFixed(3)}</div>
             <div>Max σ (psi): {extr.sigma_max.toFixed(1)}</div>
           </div>
