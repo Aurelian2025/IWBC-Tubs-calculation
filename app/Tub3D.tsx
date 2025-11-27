@@ -152,45 +152,51 @@ export default function Tub3D({
 
         // --- Visual supports: bottom extrusions & wall posts ---
     function addSupports() {
-      const supportMat = new THREE.MeshPhongMaterial({ color: 0x555555 });
+      const supportMat = new THREE.MeshPhongMaterial({
+  color: 0x777777,
+  transparent: true,
+  opacity: 0.4
+});
+
 
       const bottomY = 0;
-      const postHeight = Hw * 0.4;
-      const postSize = Math.min(Lw, Ww) * 0.03;
+const postHeight = Hw; // full tub height
+const postSize = Math.min(Lw, Ww) * 0.03;
 
-      // 1) Bottom transverse extrusions (beams across width)
-      const nBottom = Math.max(2, tub.n_transverse ?? 2);
-      const spanLen = Lw;
-      const spacingBottom = spanLen / (nBottom - 1);
 
-      for (let i = 0; i < nBottom; i++) {
-        const x = -Lw / 2 + i * spacingBottom;
-        const extrHeight = Hw * 0.05;
+          // 1) Bottom transverse extrusions (beams across width)
+    const nBottomRaw = tub.n_transverse ?? 0;
+    const nBottom = Math.max(0, nBottomRaw);
 
+    if (nBottom > 0) {
+      const extrHeight = Hw * 0.05;
+      const xPositions: number[] = [];
+
+      if (nBottom === 1) {
+        // One extrusion in the middle
+        xPositions.push(0);
+      } else if (nBottom === 2) {
+        // Two extrusions at 1/3 from the ends
+        const offset = Lw / 3;
+        xPositions.push(-offset, offset);
+      } else {
+        // 3 or more: evenly spaced from end to end
+        const spanLen = Lw;
+        const spacingBottom = spanLen / (nBottom - 1);
+        for (let i = 0; i < nBottom; i++) {
+          const x = -Lw / 2 + i * spacingBottom;
+          xPositions.push(x);
+        }
+      }
+
+      xPositions.forEach((x) => {
         const geom = new THREE.BoxGeometry(postSize, extrHeight, Ww);
         const mesh = new THREE.Mesh(geom, supportMat);
         mesh.position.set(x, bottomY - extrHeight / 2, 0);
         tubGroup.add(mesh);
-      }
+      });
+    }
 
-      // 2) Posts on long sides (front & back walls)
-      const nLongRaw = tub.n_long_side_posts ?? 0;
-      const nLong = nLongRaw > 0 ? nLongRaw : 0;
-      if (nLong > 0) {
-        const spanL = Lw;
-        const spacingL = spanL / (nLong + 1);
-
-        for (let i = 1; i <= nLong; i++) {
-          const x = -Lw / 2 + i * spacingL;
-
-          [-Ww / 2, Ww / 2].forEach((z) => {
-            const geom = new THREE.BoxGeometry(postSize, postHeight, postSize);
-            const mesh = new THREE.Mesh(geom, supportMat);
-            mesh.position.set(x, postHeight / 2, z);
-            tubGroup.add(mesh);
-          });
-        }
-      }
 
       // 3) Posts on short sides (left & right walls)
       const nShortRaw = tub.n_short_side_posts ?? 0;
