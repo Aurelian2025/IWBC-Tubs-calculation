@@ -91,15 +91,19 @@ const Tub3D: React.FC<Tub3DProps> = ({
     scene.background = new THREE.Color(0xf0f0f0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(mount.clientWidth || 800, 560);
-    mount.appendChild(renderer.domElement);
+    const width = mount.clientWidth || 800;
+const height = mount.clientHeight || 560;
 
-    const camera = new THREE.PerspectiveCamera(
-      45,
-      (mount.clientWidth || 800) / 560,
-      0.1,
-      200
-    );
+renderer.setSize(width, height);
+mount.appendChild(renderer.domElement);
+
+const camera = new THREE.PerspectiveCamera(
+  45,
+  width / height,
+  0.1,
+  200
+);
+
     const radius0 = Math.max(Lw, Ww, Hw) * 2;
     camera.position.set(radius0, radius0, radius0);
     camera.lookAt(0, Hw / 2, 0);
@@ -431,18 +435,19 @@ const Tub3D: React.FC<Tub3DProps> = ({
   }, [tub, bottomProfile, shortProfile, longProfile]);
 
   return (
-    <div
-      ref={mountRef}
-      style={{
-        width: "100%",
-        height: "560px",
-        border: "1px solid #ddd",
-        borderRadius: 8,
-        overflow: "hidden",
-        background: "#ffffff"
-      }}
-    />
-  );
+  <div
+    ref={mountRef}
+    className="tub3d-root"
+    style={{
+      width: "100%",
+      height: "100%",
+      border: "1px solid #ddd",
+      borderRadius: 8,
+      overflow: "hidden",
+      background: "#ffffff"
+    }}
+  />
+);
 };
 
 export default Tub3D;
