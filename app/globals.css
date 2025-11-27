@@ -1,1 +1,39 @@
 
+/* ---------- GLOBAL STYLES ---------- */
+
+/* Remove default padding/margins if needed */
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* ---------- RESPONSIVE LAYOUT ---------- */
+
+/* Tablet breakpoint */
+@media (max-width: 900px) {
+  .layout-grid {
+    grid-template-columns: 1fr !important; /* stack: inputs then 3D */
+  }
+  .tub3d-col {
+    margin-top: 1.5rem;
+  }
+}
+
+/* Phone breakpoint */
+@media (max-width: 600px) {
+  /* Inputs full width */
+  .label-input input {
+    width: 100% !important;
+  }
+
+  /* Shorter 3D panel */
+  .tub3d-container {
+    height: 320px !important;
+  }
+}
+
+/* Optional: make scrolling smooth on mobile */
+* {
+  -webkit-overflow-scrolling: touch;
+}
