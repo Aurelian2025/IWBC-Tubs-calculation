@@ -236,27 +236,7 @@ export default function Page() {
               • Pan: right-click or Ctrl + drag
             </div>
 
-            {/* Legend overlay in top-right corner */}
-              <div
-    style={{
-      position: "absolute",
-      bottom: 8,              // 👈 move to bottom-right
-      right: 8,
-      background: "rgba(255,255,255,0.85)",
-      border: "1px solid #ccc",
-      borderRadius: 6,
-      padding: "6px 10px",
-      fontSize: "0.75rem",
-      lineHeight: 1.3,
-      maxWidth: 220,
-      pointerEvents: "none"   // 👈 let clicks go through to 3D
-    }}
-  >
-
-              {legend3DLines.map((line, idx) => (
-                <div key={idx}>{line === "" ? <span>&nbsp;</span> : line}</div>
-              ))}
-            </div>
+           
           </div>
         </div>
       </div>
