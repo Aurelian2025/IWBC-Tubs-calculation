@@ -318,13 +318,23 @@ const Tub3D: React.FC<Tub3DProps> = ({
     addDeflectionPoints(longProfile, 0x0000cc, "front");
     addDeflectionPoints(shortProfile, 0x008800, "right");
 
-    // ====== Camera interaction (canvas only, no page scroll) ======
+       // ====== Camera interaction (canvas only, no page scroll) ======
     const canvas = renderer.domElement;
+
+    // Mouse state
     let isDragging = false;
     let isPanning = false;
     let prevX = 0;
     let prevY = 0;
 
+    // Touch state
+    let isTouchRotating = false;
+    let isTouchZooming = false;
+    let lastTouchX = 0;
+    let lastTouchY = 0;
+    let lastTouchDistance = 0;
+
+    // ---------- MOUSE HANDLERS ----------
     const onMouseDown = (event: MouseEvent) => {
       event.preventDefault();
       if (event.button === 2 || event.ctrlKey) {
@@ -381,19 +391,86 @@ const Tub3D: React.FC<Tub3DProps> = ({
       updateCameraFromAngles(theta, phi);
     };
 
-    const onTouchMove = (event: TouchEvent) => {
-      // block page scroll when interacting over canvas
-      event.preventDefault();
+    // ---------- TOUCH HANDLERS (MOBILE) ----------
+    const getDistance = (t1: Touch, t2: Touch) => {
+      const dx = t2.clientX - t1.clientX;
+      const dy = t2.clientY - t1.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
     };
 
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 1) {
+        // one-finger rotate
+        isTouchRotating = true;
+        isTouchZooming = false;
+        const t = event.touches[0];
+        lastTouchX = t.clientX;
+        lastTouchY = t.clientY;
+      } else if (event.touches.length === 2) {
+        // two-finger pinch zoom
+        isTouchRotating = false;
+        isTouchZooming = true;
+        const d = getDistance(event.touches[0], event.touches[1]);
+        lastTouchDistance = d;
+      }
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      // prevent page scroll while interacting on canvas
+      event.preventDefault();
+
+      if (isTouchRotating && event.touches.length === 1) {
+        const t = event.touches[0];
+        const dx = t.clientX - lastTouchX;
+        const dy = t.clientY - lastTouchY;
+        lastTouchX = t.clientX;
+        lastTouchY = t.clientY;
+
+        const rotSpeed = 0.005;
+        theta -= dx * rotSpeed;
+        phi -= dy * rotSpeed;
+        const eps = 0.1;
+        phi = Math.max(eps, Math.min(Math.PI - eps, phi));
+        updateCameraFromAngles(theta, phi);
+      } else if (isTouchZooming && event.touches.length === 2) {
+        const d = getDistance(event.touches[0], event.touches[1]);
+        if (lastTouchDistance > 0) {
+          const zoomFactor = lastTouchDistance / d;
+          currentRadius *= zoomFactor;
+          currentRadius = Math.max(
+            Math.max(Lw, Ww, Hw) * 0.8,
+            Math.min(currentRadius, Math.max(Lw, Ww, Hw) * 10)
+          );
+          updateCameraFromAngles(theta, phi);
+        }
+        lastTouchDistance = d;
+      }
+    };
+
+    const onTouchEnd = () => {
+      if ((isTouchRotating || isTouchZooming) === false) return;
+      // reset when touches end
+      isTouchRotating = false;
+      isTouchZooming = false;
+      lastTouchDistance = 0;
+    };
+
+    // ---------- ATTACH LISTENERS ----------
     canvas.addEventListener("mousedown", onMouseDown as any);
     canvas.addEventListener("mousemove", onMouseMove as any);
     canvas.addEventListener("mouseup", onMouseUp as any);
     canvas.addEventListener("mouseleave", onMouseUp as any);
     canvas.addEventListener("wheel", onWheel as any, { passive: false });
+
+    canvas.addEventListener("touchstart", onTouchStart as any, {
+      passive: false
+    });
     canvas.addEventListener("touchmove", onTouchMove as any, {
       passive: false
     });
+    canvas.addEventListener("touchend", onTouchEnd as any);
+    canvas.addEventListener("touchcancel", onTouchEnd as any);
+
 
     let animationFrameId: number;
     const animate = () => {
@@ -402,17 +479,23 @@ const Tub3D: React.FC<Tub3DProps> = ({
     };
     animate();
 
-    return () => {
+        return () => {
       cancelAnimationFrame(animationFrameId);
       canvas.removeEventListener("mousedown", onMouseDown as any);
       canvas.removeEventListener("mousemove", onMouseMove as any);
       canvas.removeEventListener("mouseup", onMouseUp as any);
       canvas.removeEventListener("mouseleave", onMouseUp as any);
       canvas.removeEventListener("wheel", onWheel as any);
+
+      canvas.removeEventListener("touchstart", onTouchStart as any);
       canvas.removeEventListener("touchmove", onTouchMove as any);
+      canvas.removeEventListener("touchend", onTouchEnd as any);
+      canvas.removeEventListener("touchcancel", onTouchEnd as any);
+
       mount.removeChild(canvas);
       renderer.dispose();
     };
+
   }, [tub, bottomProfile, shortProfile, longProfile]);
 
   return (
