@@ -98,11 +98,24 @@ const Tub3D: React.FC<Tub3DProps> = ({
     mount.appendChild(renderer.domElement);
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 200);
+
     const radius0 = Math.max(Lw, Ww, Hw) * 2;
-    camera.position.set(radius0, radius0, radius0);
+    let currentRadius = radius0;
 
     const center = new THREE.Vector3(0, Hw / 2, 0);
-    camera.lookAt(center);
+    let theta = Math.PI / 4;
+    let phi = Math.PI / 4;
+
+    function updateCameraFromAngles(th: number, ph: number) {
+      const r = currentRadius;
+      const x = center.x + r * Math.sin(ph) * Math.cos(th);
+      const y = center.y + r * Math.cos(ph);
+      const z = center.z + r * Math.sin(ph) * Math.sin(th);
+      camera.position.set(x, y, z);
+      camera.lookAt(center);
+    }
+
+    updateCameraFromAngles(theta, phi);
 
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambient);
@@ -227,7 +240,7 @@ const Tub3D: React.FC<Tub3DProps> = ({
 
     addSupports();
 
-    // Deflection spheres & labels
+    // Deflection spheres & labels (radius ~ deflection in mm)
     function addDeflectionPoints(
       profile: DeflectionPoint[],
       color: number,
@@ -305,41 +318,99 @@ const Tub3D: React.FC<Tub3DProps> = ({
     addDeflectionPoints(longProfile, 0x0000cc, "front");
     addDeflectionPoints(shortProfile, 0x008800, "right");
 
-    // ---- OrbitControls for rotate/pan/zoom ----
-    let controls: any;
+    // ====== Camera interaction (canvas only, no page scroll) ======
+    const canvas = renderer.domElement;
+    let isDragging = false;
+    let isPanning = false;
+    let prevX = 0;
+    let prevY = 0;
 
-    import("three/examples/jsm/controls/OrbitControls").then(
-      ({ OrbitControls }) => {
-        controls = new OrbitControls(camera, renderer.domElement);
-        controls.target.copy(center);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.1;
-        controls.rotateSpeed = 0.6;
-        controls.zoomSpeed = 0.8;
-        controls.panSpeed = 0.5;
-        controls.enablePan = true;
-        controls.minDistance = Math.max(Lw, Ww, Hw) * 0.8;
-        controls.maxDistance = Math.max(Lw, Ww, Hw) * 10;
-        controls.update();
+    const onMouseDown = (event: MouseEvent) => {
+      event.preventDefault();
+      if (event.button === 2 || event.ctrlKey) {
+        isPanning = true;
+        isDragging = false;
+      } else {
+        isDragging = true;
+        isPanning = false;
       }
-    );
+      prevX = event.clientX;
+      prevY = event.clientY;
+    };
+
+    const onMouseMove = (event: MouseEvent) => {
+      if (!isDragging && !isPanning) return;
+      event.preventDefault();
+
+      const dx = event.clientX - prevX;
+      const dy = event.clientY - prevY;
+      prevX = event.clientX;
+      prevY = event.clientY;
+
+      if (isDragging) {
+        const rotSpeed = 0.005;
+        theta -= dx * rotSpeed;
+        phi -= dy * rotSpeed;
+        const eps = 0.1;
+        phi = Math.max(eps, Math.min(Math.PI - eps, phi));
+        updateCameraFromAngles(theta, phi);
+      }
+
+      if (isPanning) {
+        const panSpeed = 0.002 * currentRadius;
+        center.x += -dx * panSpeed;
+        center.y += dy * panSpeed;
+        updateCameraFromAngles(theta, phi);
+      }
+    };
+
+    const onMouseUp = () => {
+      isDragging = false;
+      isPanning = false;
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const zoomFactor = 1.05;
+      if (event.deltaY > 0) currentRadius *= zoomFactor;
+      else currentRadius /= zoomFactor;
+      currentRadius = Math.max(
+        Math.max(Lw, Ww, Hw) * 0.8,
+        Math.min(currentRadius, Math.max(Lw, Ww, Hw) * 10)
+      );
+      updateCameraFromAngles(theta, phi);
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      // block page scroll when interacting over canvas
+      event.preventDefault();
+    };
+
+    canvas.addEventListener("mousedown", onMouseDown as any);
+    canvas.addEventListener("mousemove", onMouseMove as any);
+    canvas.addEventListener("mouseup", onMouseUp as any);
+    canvas.addEventListener("mouseleave", onMouseUp as any);
+    canvas.addEventListener("wheel", onWheel as any, { passive: false });
+    canvas.addEventListener("touchmove", onTouchMove as any, {
+      passive: false
+    });
 
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      if (controls) {
-        controls.update();
-      }
       renderer.render(scene, camera);
     };
     animate();
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      if (controls && controls.dispose) {
-        controls.dispose();
-      }
-      mount.removeChild(renderer.domElement);
+      canvas.removeEventListener("mousedown", onMouseDown as any);
+      canvas.removeEventListener("mousemove", onMouseMove as any);
+      canvas.removeEventListener("mouseup", onMouseUp as any);
+      canvas.removeEventListener("mouseleave", onMouseUp as any);
+      canvas.removeEventListener("wheel", onWheel as any);
+      canvas.removeEventListener("touchmove", onTouchMove as any);
+      mount.removeChild(canvas);
       renderer.dispose();
     };
   }, [tub, bottomProfile, shortProfile, longProfile]);
