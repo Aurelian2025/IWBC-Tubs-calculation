@@ -412,10 +412,14 @@ const camera = new THREE.PerspectiveCamera(
       updateCameraFromAngles(theta, phi);
     };
 
-    window.addEventListener("mousedown", onMouseDown);
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
+    const canvas = renderer.domElement;
+
+canvas.addEventListener("mousedown", onMouseDown);
+canvas.addEventListener("mousemove", onMouseMove);
+canvas.addEventListener("mouseup", onMouseUp);
+canvas.addEventListener("mouseleave", onMouseUp);
+canvas.addEventListener("wheel", onWheel, { passive: false });
+
 
     let animationFrameId: number;
     const animate = () => {
@@ -426,11 +430,14 @@ const camera = new THREE.PerspectiveCamera(
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      window.removeEventListener("mousedown", onMouseDown);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-      renderer.domElement.removeEventListener("wheel", onWheel);
-      mount.removeChild(renderer.domElement);
+      const canvas = renderer.domElement;
+canvas.removeEventListener("mousedown", onMouseDown);
+canvas.removeEventListener("mousemove", onMouseMove);
+canvas.removeEventListener("mouseup", onMouseUp);
+canvas.removeEventListener("mouseleave", onMouseUp);
+canvas.removeEventListener("wheel", onWheel);
+mount.removeChild(canvas);
+
     };
   }, [tub, bottomProfile, shortProfile, longProfile]);
 
