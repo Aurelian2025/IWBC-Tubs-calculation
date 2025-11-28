@@ -92,21 +92,29 @@ const Tub3D: React.FC<Tub3DProps> = ({
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     const width = mount.clientWidth || 800;
-const height = mount.clientHeight || 560;
+    const height = mount.clientHeight || 560;
+    renderer.setSize(width, height);
+    mount.appendChild(renderer.domElement);
 
-renderer.setSize(width, height);
-mount.appendChild(renderer.domElement);
-
-const camera = new THREE.PerspectiveCamera(
-  45,
-  width / height,
-  0.1,
-  200
-);
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 200);
 
     const radius0 = Math.max(Lw, Ww, Hw) * 2;
-    camera.position.set(radius0, radius0, radius0);
-    camera.lookAt(0, Hw / 2, 0);
+    let currentRadius = radius0;
+
+    const center = new THREE.Vector3(0, Hw / 2, 0);
+    let theta = Math.PI / 4;
+    let phi = Math.PI / 4;
+
+    function updateCameraFromAngles(th: number, ph: number) {
+      const r = currentRadius;
+      const x = center.x + r * Math.sin(ph) * Math.cos(th);
+      const y = center.y + r * Math.cos(ph);
+      const z = center.z + r * Math.sin(ph) * Math.sin(th);
+      camera.position.set(x, y, z);
+      camera.lookAt(center);
+    }
+
+    updateCameraFromAngles(theta, phi);
 
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambient);
@@ -129,7 +137,7 @@ const camera = new THREE.PerspectiveCamera(
 
     // Water plane
     const waterDepthIn = Math.min(tub.water_freeboard_in, tub.H_tub_in);
-    const waterDepthWorld = (waterDepthIn / 12);
+    const waterDepthWorld = waterDepthIn / 12;
     const waterY = waterDepthWorld; // from bottom
     const waterGeom = new THREE.PlaneGeometry(Lw * 0.98, Ww * 0.98);
     const waterMat = new THREE.MeshPhongMaterial({
@@ -231,19 +239,16 @@ const camera = new THREE.PerspectiveCamera(
 
     addSupports();
 
-       // Helper to add deflection spheres & labels
+    // Helper to add deflection spheres & labels, radius ~ deflection (mm)
     function addDeflectionPoints(
       profile: DeflectionPoint[],
       color: number,
       face: "bottom" | "front" | "right"
     ) {
-      // work in mm so this matches the legend values exactly
       const maxDefMm = Math.max(
         ...profile.map((p) => Math.abs(p.deflection_in * 25.4)),
         1e-6
       );
-
-      // smaller base, larger extra → more visible difference
       const baseRadius = Math.min(Lw, Ww, Hw) * 0.01;
       const extraRadius = baseRadius * 6;
 
@@ -289,7 +294,6 @@ const camera = new THREE.PerspectiveCamera(
         sphere.position.set(x, y, z);
         tubGroup.add(sphere);
 
-        // label
         let labelText = "";
         let labelColor = "";
         if (face === "bottom") {
@@ -309,51 +313,37 @@ const camera = new THREE.PerspectiveCamera(
       });
     }
 
-
-    // Add bottom, short, long points
+    // Add points on all faces
     addDeflectionPoints(bottomProfile, 0xcc0000, "bottom");
     addDeflectionPoints(longProfile, 0x0000cc, "front");
     addDeflectionPoints(shortProfile, 0x008800, "right");
 
-    // Simple mouse controls (rotate + pan + wheel zoom)
+    // ====== Camera interaction (canvas only, no page scroll) ======
+    const canvas = renderer.domElement;
     let isDragging = false;
     let isPanning = false;
     let prevX = 0;
     let prevY = 0;
-    let currentRadius = radius0;
-
-    const center = new THREE.Vector3(0, Hw / 2, 0);
-
-    function updateCameraFromAngles(theta: number, phi: number) {
-      const r = currentRadius;
-      const x = center.x + r * Math.sin(phi) * Math.cos(theta);
-      const y = center.y + r * Math.cos(phi);
-      const z = center.z + r * Math.sin(phi) * Math.sin(theta);
-      camera.position.set(x, y, z);
-      camera.lookAt(center);
-    }
-
-    let theta = Math.PI / 4;
-    let phi = Math.PI / 4;
-
-    updateCameraFromAngles(theta, phi);
 
     const onMouseDown = (event: MouseEvent) => {
-  event.preventDefault();
-  if (event.button === 2 || event.ctrlKey) {
-    isPanning = true;
-  } else {
-    isDragging = true;
-  }
-  prevX = event.clientX;
-  prevY = event.clientY;
-};
+      event.preventDefault();
+      if (event.button === 2 || event.ctrlKey) {
+        isPanning = true;
+        isDragging = false;
+      } else {
+        isDragging = true;
+        isPanning = false;
+      }
+      prevX = event.clientX;
+      prevY = event.clientY;
+    };
 
     const onMouseMove = (event: MouseEvent) => {
-  if (!isDragging && !isPanning) return;
-  event.preventDefault();
-  const dx = event.clientX - prevX;
-  const dy = event.clientY - prevY;
+      if (!isDragging && !isPanning) return;
+      event.preventDefault();
+
+      const dx = event.clientX - prevX;
+      const dy = event.clientY - prevY;
       prevX = event.clientX;
       prevY = event.clientY;
 
@@ -364,12 +354,12 @@ const camera = new THREE.PerspectiveCamera(
         const eps = 0.1;
         phi = Math.max(eps, Math.min(Math.PI - eps, phi));
         updateCameraFromAngles(theta, phi);
-      } else if (isPanning) {
+      }
+
+      if (isPanning) {
         const panSpeed = 0.002 * currentRadius;
-        const offsetX = -dx * panSpeed;
-        const offsetY = dy * panSpeed;
-        center.x += offsetX;
-        center.y += offsetY;
+        center.x += -dx * panSpeed;
+        center.y += dy * panSpeed;
         updateCameraFromAngles(theta, phi);
       }
     };
@@ -380,30 +370,28 @@ const camera = new THREE.PerspectiveCamera(
     };
 
     const onWheel = (event: WheelEvent) => {
-  event.preventDefault();
-  const delta = event.deltaY;
-  const zoomFactor = 1.05;
-  if (delta > 0) {
-    currentRadius *= zoomFactor;
-  } else {
-    currentRadius /= zoomFactor;
-  }
-  currentRadius = Math.max(
-    Math.max(Lw, Ww, Hw) * 0.8,
-    Math.min(currentRadius, Math.max(Lw, Ww, Hw) * 10)
-  );
-  updateCameraFromAngles(theta, phi);
-};
+      event.preventDefault();
+      const zoomFactor = 1.05;
+      if (event.deltaY > 0) currentRadius *= zoomFactor;
+      else currentRadius /= zoomFactor;
+      currentRadius = Math.max(
+        Math.max(Lw, Ww, Hw) * 0.8,
+        Math.min(currentRadius, Math.max(Lw, Ww, Hw) * 10)
+      );
+      updateCameraFromAngles(theta, phi);
+    };
 
+    const onTouchMove = (event: TouchEvent) => {
+      // block page scroll when interacting over canvas
+      event.preventDefault();
+    };
 
-    const canvas = renderer.domElement;
-
-canvas.addEventListener("mousedown", onMouseDown);
-canvas.addEventListener("mousemove", onMouseMove);
-canvas.addEventListener("mouseup", onMouseUp);
-canvas.addEventListener("mouseleave", onMouseUp);
-canvas.addEventListener("wheel", onWheel, { passive: false });
-
+    canvas.addEventListener("mousedown", onMouseDown);
+    canvas.addEventListener("mousemove", onMouseMove);
+    canvas.addEventListener("mouseup", onMouseUp);
+    canvas.addEventListener("mouseleave", onMouseUp);
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
 
     let animationFrameId: number;
     const animate = () => {
@@ -414,31 +402,30 @@ canvas.addEventListener("wheel", onWheel, { passive: false });
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      const canvas = renderer.domElement;
-canvas.removeEventListener("mousedown", onMouseDown);
-canvas.removeEventListener("mousemove", onMouseMove);
-canvas.removeEventListener("mouseup", onMouseUp);
-canvas.removeEventListener("mouseleave", onMouseUp);
-canvas.removeEventListener("wheel", onWheel);
-mount.removeChild(canvas);
-
+      canvas.removeEventListener("mousedown", onMouseDown);
+      canvas.removeEventListener("mousemove", onMouseMove);
+      canvas.removeEventListener("mouseup", onMouseUp);
+      canvas.removeEventListener("mouseleave", onMouseUp);
+      canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      mount.removeChild(canvas);
     };
   }, [tub, bottomProfile, shortProfile, longProfile]);
 
   return (
-  <div
-    ref={mountRef}
-    className="tub3d-root"
-    style={{
-      width: "100%",
-      height: "100%",
-      border: "1px solid #ddd",
-      borderRadius: 8,
-      overflow: "hidden",
-      background: "#ffffff"
-    }}
-  />
-);
+    <div
+      ref={mountRef}
+      className="tub3d-root"
+      style={{
+        width: "100%",
+        height: "100%",
+        border: "1px solid #ddd",
+        borderRadius: 8,
+        overflow: "hidden",
+        background: "#ffffff"
+      }}
+    />
+  );
 };
 
 export default Tub3D;
