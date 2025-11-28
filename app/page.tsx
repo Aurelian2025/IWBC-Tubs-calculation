@@ -206,6 +206,17 @@ export default function Page() {
           <h2 style={{ marginTop: 0, marginBottom: "0.3rem" }}>
             3D Interactive View
           </h2>
+<div
+  style={{
+    textAlign: "center",
+    fontSize: "0.75rem",
+    marginBottom: "0.5rem",
+    color: "#555"
+  }}
+>
+  <strong>3D Controls:</strong> Rotate: drag &nbsp;|&nbsp; Zoom: wheel / pinch
+  &nbsp;|&nbsp; Pan: right-click / two-finger drag
+</div>
 
           <div
             className="tub3d-container"
@@ -222,40 +233,7 @@ export default function Page() {
               longProfile={longProfile}
             />
 
-            {/* Instructions overlay (click-through) */}
-            <div
-              style={{
-                position: "absolute",
-                top: 8,
-                left: 8,
-                background: "rgba(255,255,255,0.85)",
-                border: "1px solid #ccc",
-                borderRadius: 6,
-                padding: "4px 8px",
-                fontSize: "0.75rem",
-                lineHeight: 1.3,
-                maxWidth: 240,
-                pointerEvents: "none"
-              }}
-            >
-                <strong>3D Controls:</strong>
-  <br />
-  <em>Desktop:</em>
-  <br />
-  • Rotate: left-click + drag
-  <br />
-  • Pan: right-click or Ctrl + drag
-  <br />
-  • Zoom: mouse wheel
-  <br />
-  <br />
-  <em>Mobile:</em>
-  <br />
-  • Rotate: 1 finger drag
-  <br />
-  • Zoom: 2-finger pinch
-
-            </div>
+            
           </div>
 
           {/* Legend panel below 3D view */}
