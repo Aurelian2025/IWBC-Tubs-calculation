@@ -234,10 +234,25 @@ export default function Page() {
               • Rotate: left-click + drag
               <br />
               • Pan: right-click or Ctrl + drag
-            </div>
-
-           
+            </div>        
           </div>
+{/* Legend panel below 3D view */}
+  <div
+    style={{
+      marginTop: "0.75rem",
+      padding: "6px 10px",
+      border: "1px solid #ccc",
+      borderRadius: 6,
+      fontSize: "0.75rem",
+      lineHeight: 1.3,
+      maxHeight: "200px",
+      overflowY: "auto",
+      background: "#fafafa"
+    }}
+  >
+    {legend3DLines.map((line, idx) => (
+      <div key={idx}>{line === "" ? <span>&nbsp;</span> : line}</div>
+    ))}
         </div>
       </div>
 
