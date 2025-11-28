@@ -214,8 +214,8 @@ export default function Page() {
     color: "#555"
   }}
 >
-  <strong>3D Controls:</strong> Rotate: drag &nbsp;|&nbsp; Zoom: wheel / pinch
-  &nbsp;|&nbsp; Pan: right-click / two-finger drag
+  <strong>3D Controls:</strong> Rotate: Left-click drag &nbsp;|&nbsp; Zoom: wheel / pinch
+  &nbsp;|&nbsp; Pan: right-click drag / two-finger drag
 </div>
 
           <div
