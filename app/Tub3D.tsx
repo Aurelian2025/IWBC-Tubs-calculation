@@ -350,9 +350,10 @@ const camera = new THREE.PerspectiveCamera(
 };
 
     const onMouseMove = (event: MouseEvent) => {
-      if (!isDragging && !isPanning) return;
-      const dx = event.clientX - prevX;
-      const dy = event.clientY - prevY;
+  if (!isDragging && !isPanning) return;
+  event.preventDefault();
+  const dx = event.clientX - prevX;
+  const dy = event.clientY - prevY;
       prevX = event.clientX;
       prevY = event.clientY;
 
@@ -379,29 +380,21 @@ const camera = new THREE.PerspectiveCamera(
     };
 
     const onWheel = (event: WheelEvent) => {
-      const rect = renderer.domElement.getBoundingClientRect();
-      if (
-        event.clientX < rect.left ||
-        event.clientX > rect.right ||
-        event.clientY < rect.top ||
-        event.clientY > rect.bottom
-      ) {
-        return;
-      }
-      event.preventDefault();
-      const delta = event.deltaY;
-      const zoomFactor = 1.05;
-      if (delta > 0) {
-        currentRadius *= zoomFactor;
-      } else {
-        currentRadius /= zoomFactor;
-      }
-      currentRadius = Math.max(
-        Math.max(Lw, Ww, Hw) * 0.8,
-        Math.min(currentRadius, Math.max(Lw, Ww, Hw) * 10)
-      );
-      updateCameraFromAngles(theta, phi);
-    };
+  event.preventDefault();
+  const delta = event.deltaY;
+  const zoomFactor = 1.05;
+  if (delta > 0) {
+    currentRadius *= zoomFactor;
+  } else {
+    currentRadius /= zoomFactor;
+  }
+  currentRadius = Math.max(
+    Math.max(Lw, Ww, Hw) * 0.8,
+    Math.min(currentRadius, Math.max(Lw, Ww, Hw) * 10)
+  );
+  updateCameraFromAngles(theta, phi);
+};
+
 
     const canvas = renderer.domElement;
 
