@@ -39,7 +39,7 @@ function LabelInput({ label, value, onChange }: LabelInputProps) {
         onChange={(e) => {
           const v = e.target.value;
           if (v === "") {
-            // allow the field to be temporarily empty (no forced zero)
+            // allow temporarily empty field without forcing 0
             onChange(NaN as unknown as number);
             return;
           }
@@ -54,6 +54,7 @@ function LabelInput({ label, value, onChange }: LabelInputProps) {
     </label>
   );
 }
+
 
 
 const INCH_TO_MM = 25.4;
