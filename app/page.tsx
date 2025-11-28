@@ -36,7 +36,15 @@ function LabelInput({ label, value, onChange }: LabelInputProps) {
       <input
         type="number"
         value={Number.isFinite(value) ? value : ""}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === "") {
+            // allow the field to be temporarily empty (no forced zero)
+            onChange(NaN as unknown as number);
+            return;
+          }
+          onChange(parseFloat(v));
+        }}
         style={{
           padding: "0.25rem 0.4rem",
           width: "8rem",
@@ -46,6 +54,7 @@ function LabelInput({ label, value, onChange }: LabelInputProps) {
     </label>
   );
 }
+
 
 const INCH_TO_MM = 25.4;
 
