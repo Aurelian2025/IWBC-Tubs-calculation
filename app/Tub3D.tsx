@@ -339,24 +339,15 @@ const camera = new THREE.PerspectiveCamera(
     updateCameraFromAngles(theta, phi);
 
     const onMouseDown = (event: MouseEvent) => {
-      const rect = renderer.domElement.getBoundingClientRect();
-      if (
-        event.clientX < rect.left ||
-        event.clientX > rect.right ||
-        event.clientY < rect.top ||
-        event.clientY > rect.bottom
-      ) {
-        return;
-      }
-      event.preventDefault();
-      if (event.button === 2 || event.ctrlKey) {
-        isPanning = true;
-      } else {
-        isDragging = true;
-      }
-      prevX = event.clientX;
-      prevY = event.clientY;
-    };
+  event.preventDefault();
+  if (event.button === 2 || event.ctrlKey) {
+    isPanning = true;
+  } else {
+    isDragging = true;
+  }
+  prevX = event.clientX;
+  prevY = event.clientY;
+};
 
     const onMouseMove = (event: MouseEvent) => {
       if (!isDragging && !isPanning) return;
