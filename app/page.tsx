@@ -238,13 +238,23 @@ export default function Page() {
                 pointerEvents: "none"
               }}
             >
-              <strong>3D Controls:</strong>
-              <br />
-              • Zoom: mouse wheel
-              <br />
-              • Rotate: left-click + drag
-              <br />
-              • Pan: right-click or Ctrl + drag
+                <strong>3D Controls:</strong>
+  <br />
+  <em>Desktop:</em>
+  <br />
+  • Rotate: left-click + drag
+  <br />
+  • Pan: right-click or Ctrl + drag
+  <br />
+  • Zoom: mouse wheel
+  <br />
+  <br />
+  <em>Mobile:</em>
+  <br />
+  • Rotate: 1 finger drag
+  <br />
+  • Zoom: 2-finger pinch
+
             </div>
           </div>
 
