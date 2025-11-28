@@ -27,9 +27,9 @@ type LabelInputProps = {
 function LabelInput({ label, value, onChange }: LabelInputProps) {
   return (
     <label
-  className="label-input"
-  style={{ display: "block", marginBottom: "0.5rem" }}
->
+      className="label-input"
+      style={{ display: "block", marginBottom: "0.5rem" }}
+    >
       <div style={{ fontSize: "0.85rem", marginBottom: "0.15rem" }}>
         {label}
       </div>
@@ -39,7 +39,7 @@ function LabelInput({ label, value, onChange }: LabelInputProps) {
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
         style={{
           padding: "0.25rem 0.4rem",
-          width: "8rem", // narrower inputs
+          width: "8rem",
           boxSizing: "border-box"
         }}
       />
@@ -55,10 +55,12 @@ export default function Page() {
   const [tub, setTub] = useState<TubGeometry>(
     defaultTubConfig.tub as TubGeometry
   );
+  // frame only used for extrusion deflection calc, no UI editing
   const [frame] = useState<FrameGeometry>(
     defaultTubConfig.frame as FrameGeometry
   );
 
+  // --- Calculations ---
   const bottom = mdfBottomDeflection(tub, materials);
   const extr = extrusionDeflection(tub, frame, materials);
 
@@ -66,6 +68,7 @@ export default function Page() {
   const shortProfile = shortSideDeflectionProfile(tub, materials, 5);
   const longProfile = longSideDeflectionProfile(tub, materials, 11);
 
+  // --- Legend lines for 3D view ---
   const legend3DLines: string[] = [];
 
   legend3DLines.push("Bottom δ (mm):");
@@ -117,18 +120,17 @@ export default function Page() {
 
       {/* Top layout: left = inputs, right = 3D view */}
       <div
-  className="layout-grid"
-  style={{
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 3.2fr)",
-    gap: "1.5rem",
-    alignItems: "flex-start",
-    marginBottom: "2rem"
-  }}
->
-
+        className="layout-grid"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 3.2fr)",
+          gap: "1.5rem",
+          alignItems: "flex-start",
+          marginBottom: "2rem"
+        }}
+      >
         {/* LEFT COLUMN: Inputs */}
-       <div className="inputs-col">
+        <div className="inputs-col">
           {/* Tub Geometry */}
           <section style={{ marginBottom: "1.5rem" }}>
             <h2 style={{ fontSize: "1.2rem", marginBottom: "0.5rem" }}>
@@ -189,7 +191,7 @@ export default function Page() {
           </section>
         </div>
 
-        {/* RIGHT COLUMN: 3D Interactive View */}
+        {/* RIGHT COLUMN: 3D Interactive View + legend below */}
         <div className="tub3d-col">
           <h2 style={{ marginTop: 0, marginBottom: "0.3rem" }}>
             3D Interactive View
@@ -210,23 +212,22 @@ export default function Page() {
               longProfile={longProfile}
             />
 
-           {/* Instructions overlay (click-through) */}
-    <div
-      style={{
-        position: "absolute",
-        top: 8,
-        left: 8,
-        background: "rgba(255,255,255,0.85)",
-        border: "1px solid #ccc",
-        borderRadius: 6,
-        padding: "4px 8px",
-        fontSize: "0.75rem",
-        lineHeight: 1.3,
-        maxWidth: 240,
-        pointerEvents: "none"
-      }}
-    >
-
+            {/* Instructions overlay (click-through) */}
+            <div
+              style={{
+                position: "absolute",
+                top: 8,
+                left: 8,
+                background: "rgba(255,255,255,0.85)",
+                border: "1px solid #ccc",
+                borderRadius: 6,
+                padding: "4px 8px",
+                fontSize: "0.75rem",
+                lineHeight: 1.3,
+                maxWidth: 240,
+                pointerEvents: "none"
+              }}
+            >
               <strong>3D Controls:</strong>
               <br />
               • Zoom: mouse wheel
@@ -234,25 +235,27 @@ export default function Page() {
               • Rotate: left-click + drag
               <br />
               • Pan: right-click or Ctrl + drag
-            </div>        
+            </div>
           </div>
-{/* Legend panel below 3D view */}
-  <div
-    style={{
-      marginTop: "0.75rem",
-      padding: "6px 10px",
-      border: "1px solid #ccc",
-      borderRadius: 6,
-      fontSize: "0.75rem",
-      lineHeight: 1.3,
-      maxHeight: "200px",
-      overflowY: "auto",
-      background: "#fafafa"
-    }}
-  >
-    {legend3DLines.map((line, idx) => (
-      <div key={idx}>{line === "" ? <span>&nbsp;</span> : line}</div>
-    ))}
+
+          {/* Legend panel below 3D view */}
+          <div
+            style={{
+              marginTop: "0.75rem",
+              padding: "6px 10px",
+              border: "1px solid #ccc",
+              borderRadius: 6,
+              fontSize: "0.75rem",
+              lineHeight: 1.3,
+              maxHeight: "200px",
+              overflowY: "auto",
+              background: "#fafafa"
+            }}
+          >
+            {legend3DLines.map((line, idx) => (
+              <div key={idx}>{line === "" ? <span>&nbsp;</span> : line}</div>
+            ))}
+          </div>
         </div>
       </div>
 
