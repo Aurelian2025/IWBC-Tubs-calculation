@@ -66,7 +66,7 @@ function makeTextLabel(text: string, color: string): THREE.Sprite {
   });
 
   const sprite = new THREE.Sprite(material);
-  sprite.scale.set(0.7, 0.3, 1); // larger labels
+  sprite.scale.set(0.7, 0.3, 1);
   return sprite;
 }
 
@@ -82,7 +82,10 @@ const Tub3D: React.FC<Tub3DProps> = ({
     const mount = mountRef.current;
     if (!mount) return;
 
-    // Basic sizes in "world units" (feet-ish)
+    const width = mount.clientWidth || 800;
+    const height = mount.clientHeight || 560;
+
+    // Basic sizes in "world units"
     const Lw = tub.L_tub_in / 12;
     const Ww = tub.W_tub_in / 12;
     const Hw = tub.H_tub_in / 12;
@@ -91,30 +94,15 @@ const Tub3D: React.FC<Tub3DProps> = ({
     scene.background = new THREE.Color(0xf0f0f0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    const width = mount.clientWidth || 800;
-    const height = mount.clientHeight || 560;
     renderer.setSize(width, height);
     mount.appendChild(renderer.domElement);
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 200);
-
     const radius0 = Math.max(Lw, Ww, Hw) * 2;
-    let currentRadius = radius0;
+    camera.position.set(radius0, radius0, radius0);
 
     const center = new THREE.Vector3(0, Hw / 2, 0);
-    let theta = Math.PI / 4;
-    let phi = Math.PI / 4;
-
-    function updateCameraFromAngles(th: number, ph: number) {
-      const r = currentRadius;
-      const x = center.x + r * Math.sin(ph) * Math.cos(th);
-      const y = center.y + r * Math.cos(ph);
-      const z = center.z + r * Math.sin(ph) * Math.sin(th);
-      camera.position.set(x, y, z);
-      camera.lookAt(center);
-    }
-
-    updateCameraFromAngles(theta, phi);
+    camera.lookAt(center);
 
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambient);
@@ -138,7 +126,7 @@ const Tub3D: React.FC<Tub3DProps> = ({
     // Water plane
     const waterDepthIn = Math.min(tub.water_freeboard_in, tub.H_tub_in);
     const waterDepthWorld = waterDepthIn / 12;
-    const waterY = waterDepthWorld; // from bottom
+    const waterY = waterDepthWorld;
     const waterGeom = new THREE.PlaneGeometry(Lw * 0.98, Ww * 0.98);
     const waterMat = new THREE.MeshPhongMaterial({
       color: 0x88c8ff,
@@ -165,7 +153,7 @@ const Tub3D: React.FC<Tub3DProps> = ({
       });
 
       const bottomY = 0;
-      const postHeight = Hw; // full tub height
+      const postHeight = Hw;
       const postSize = Math.min(Lw, Ww) * 0.03;
 
       // 1) Bottom transverse extrusions (beams across width)
@@ -204,7 +192,7 @@ const Tub3D: React.FC<Tub3DProps> = ({
       if (nLong > 0) {
         const spanL = Lw;
         const spacingL = spanL / (nLong + 1);
-        const zOffset = Ww / 2 + postSize / 2; // outside front/back
+        const zOffset = Ww / 2 + postSize / 2;
 
         for (let i = 1; i <= nLong; i++) {
           const x = -Lw / 2 + i * spacingL;
@@ -223,7 +211,7 @@ const Tub3D: React.FC<Tub3DProps> = ({
       if (nShort > 0) {
         const spanW = Ww;
         const spacingW = spanW / (nShort + 1);
-        const xOffset = Lw / 2 + postSize / 2; // outside left/right
+        const xOffset = Lw / 2 + postSize / 2;
 
         for (let i = 1; i <= nShort; i++) {
           const z = -Ww / 2 + i * spacingW;
@@ -239,7 +227,7 @@ const Tub3D: React.FC<Tub3DProps> = ({
 
     addSupports();
 
-    // Helper to add deflection spheres & labels, radius ~ deflection (mm)
+    // Deflection spheres & labels
     function addDeflectionPoints(
       profile: DeflectionPoint[],
       color: number,
@@ -313,102 +301,46 @@ const Tub3D: React.FC<Tub3DProps> = ({
       });
     }
 
-    // Add points on all faces
     addDeflectionPoints(bottomProfile, 0xcc0000, "bottom");
     addDeflectionPoints(longProfile, 0x0000cc, "front");
     addDeflectionPoints(shortProfile, 0x008800, "right");
 
-    // ====== Camera interaction (canvas only, no page scroll) ======
-    const canvas = renderer.domElement;
-    let isDragging = false;
-    let isPanning = false;
-    let prevX = 0;
-    let prevY = 0;
+    // ---- OrbitControls for rotate/pan/zoom ----
+    let controls: any;
 
-    const onMouseDown = (event: MouseEvent) => {
-      event.preventDefault();
-      if (event.button === 2 || event.ctrlKey) {
-        isPanning = true;
-        isDragging = false;
-      } else {
-        isDragging = true;
-        isPanning = false;
+    import("three/examples/jsm/controls/OrbitControls").then(
+      ({ OrbitControls }) => {
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.copy(center);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.1;
+        controls.rotateSpeed = 0.6;
+        controls.zoomSpeed = 0.8;
+        controls.panSpeed = 0.5;
+        controls.enablePan = true;
+        controls.minDistance = Math.max(Lw, Ww, Hw) * 0.8;
+        controls.maxDistance = Math.max(Lw, Ww, Hw) * 10;
+        controls.update();
       }
-      prevX = event.clientX;
-      prevY = event.clientY;
-    };
-
-    const onMouseMove = (event: MouseEvent) => {
-      if (!isDragging && !isPanning) return;
-      event.preventDefault();
-
-      const dx = event.clientX - prevX;
-      const dy = event.clientY - prevY;
-      prevX = event.clientX;
-      prevY = event.clientY;
-
-      if (isDragging) {
-        const rotSpeed = 0.005;
-        theta -= dx * rotSpeed;
-        phi -= dy * rotSpeed;
-        const eps = 0.1;
-        phi = Math.max(eps, Math.min(Math.PI - eps, phi));
-        updateCameraFromAngles(theta, phi);
-      }
-
-      if (isPanning) {
-        const panSpeed = 0.002 * currentRadius;
-        center.x += -dx * panSpeed;
-        center.y += dy * panSpeed;
-        updateCameraFromAngles(theta, phi);
-      }
-    };
-
-    const onMouseUp = () => {
-      isDragging = false;
-      isPanning = false;
-    };
-
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      const zoomFactor = 1.05;
-      if (event.deltaY > 0) currentRadius *= zoomFactor;
-      else currentRadius /= zoomFactor;
-      currentRadius = Math.max(
-        Math.max(Lw, Ww, Hw) * 0.8,
-        Math.min(currentRadius, Math.max(Lw, Ww, Hw) * 10)
-      );
-      updateCameraFromAngles(theta, phi);
-    };
-
-    const onTouchMove = (event: TouchEvent) => {
-      // block page scroll when interacting over canvas
-      event.preventDefault();
-    };
-
-    canvas.addEventListener("mousedown", onMouseDown);
-    canvas.addEventListener("mousemove", onMouseMove);
-    canvas.addEventListener("mouseup", onMouseUp);
-    canvas.addEventListener("mouseleave", onMouseUp);
-    canvas.addEventListener("wheel", onWheel, { passive: false });
-    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    );
 
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
+      if (controls) {
+        controls.update();
+      }
       renderer.render(scene, camera);
     };
     animate();
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      canvas.removeEventListener("mousedown", onMouseDown);
-      canvas.removeEventListener("mousemove", onMouseMove);
-      canvas.removeEventListener("mouseup", onMouseUp);
-      canvas.removeEventListener("mouseleave", onMouseUp);
-      canvas.removeEventListener("wheel", onWheel);
-      canvas.removeEventListener("touchmove", onTouchMove);
-      mount.removeChild(canvas);
+      if (controls && controls.dispose) {
+        controls.dispose();
+      }
+      mount.removeChild(renderer.domElement);
+      renderer.dispose();
     };
   }, [tub, bottomProfile, shortProfile, longProfile]);
 
