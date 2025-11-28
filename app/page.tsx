@@ -210,22 +210,22 @@ export default function Page() {
               longProfile={longProfile}
             />
 
-            {/* Instructions overlay */}
-              <div
-    style={{
-      position: "absolute",
-      top: 8,
-      left: 8,
-      background: "rgba(255,255,255,0.85)",
-      border: "1px solid #ccc",
-      borderRadius: 6,
-      padding: "4px 8px",
-      fontSize: "0.75rem",
-      lineHeight: 1.3,
-      maxWidth: 240,
-      pointerEvents: "none"   // 👈 this is the key
-    }}
-  >
+           {/* Instructions overlay (click-through) */}
+    <div
+      style={{
+        position: "absolute",
+        top: 8,
+        left: 8,
+        background: "rgba(255,255,255,0.85)",
+        border: "1px solid #ccc",
+        borderRadius: 6,
+        padding: "4px 8px",
+        fontSize: "0.75rem",
+        lineHeight: 1.3,
+        maxWidth: 240,
+        pointerEvents: "none"
+      }}
+    >
 
               <strong>3D Controls:</strong>
               <br />
