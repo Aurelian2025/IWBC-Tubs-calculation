@@ -23,7 +23,7 @@ export type TubGeometry = {
   // water depth (in)
   water_freeboard_in: number;
 
-  // bottom transverse extrusions (2525)
+  // bottom transverse frame (2525)
   n_transverse: number;
 
   // NEW: transverse stiffeners / posts on the long side walls
@@ -136,7 +136,7 @@ const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in); // inches
 }
 
 // -------------------------
-// vessel Bottom Deflection (plate on foam foundation, with bottom extrusions)
+// vessel Bottom Deflection (plate on foam foundation, with bottom frame)
 // -------------------------
 
 export function vesselBottomDeflection(
@@ -150,9 +150,9 @@ export function vesselBottomDeflection(
   // Uniform pressure on the bottom (psi = lb/in^2)
   const q_bottom = gamma * h_water;
 
-  // Bottom transverse extrusions break the bottom into panels along the length
+  // Bottom transverse frame break the bottom into panels along the length
   const nPanels = Math.max(2, tub.n_transverse);        // at least two supports
-  const panelLen = tub.L_tub_in / (nPanels - 1);        // spacing between extrusions (in)
+  const panelLen = tub.L_tub_in / (nPanels - 1);        // spacing between frame (in)
 
   // Effective shorter side of the panel: min(panel length, tub width)
   const a = Math.min(panelLen, tub.W_tub_in);           // in
