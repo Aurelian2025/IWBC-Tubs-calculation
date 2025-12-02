@@ -8,7 +8,7 @@ import {
   MaterialsConfig,
   TubGeometry,
   FrameGeometry,
-  mdfBottomDeflection,
+  vesselBottomDeflection,
   extrusionDeflection,
   bottomDeflectionProfile,
   shortSideDeflectionProfile,
@@ -71,7 +71,7 @@ export default function Page() {
   );
 
   // --- Calculations ---
-  const bottom = mdfBottomDeflection(tub, materials);
+  const bottom = vesselBottomDeflection(tub, materials);
   const extr = extrusionDeflection(tub, frame, materials);
 
   const bottomProfile = bottomDeflectionProfile(tub, materials, 11);
@@ -162,14 +162,14 @@ export default function Page() {
               onChange={(v) => setTub({ ...tub, H_tub_in: v })}
             />
             <LabelInput
-              label="Bottom Thickness (MDF, in)"
-              value={tub.t_mdf_bottom_in}
-              onChange={(v) => setTub({ ...tub, t_mdf_bottom_in: v })}
+              label="Bottom Thickness (vessel, in)"
+              value={tub.t_vessel_bottom_in}
+              onChange={(v) => setTub({ ...tub, t_vessel_bottom_in: v })}
             />
             <LabelInput
-              label="Side Thickness (MDF, in)"
-              value={tub.t_mdf_side_in}
-              onChange={(v) => setTub({ ...tub, t_mdf_side_in: v })}
+              label="Side Thickness (vessel, in)"
+              value={tub.t_vessel_side_in}
+              onChange={(v) => setTub({ ...tub, t_vessel_side_in: v })}
             />
           </section>
 
@@ -277,7 +277,7 @@ export default function Page() {
               padding: "0.5rem 0.75rem"
             }}
           >
-            <strong>Bottom MDF Panel</strong>
+            <strong>Bottom vessel Panel</strong>
             <div>
               Max δ (mm): {(bottom.delta_max * INCH_TO_MM).toFixed(3)}
             </div>
