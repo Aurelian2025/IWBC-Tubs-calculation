@@ -3,7 +3,7 @@
     "water": {
       "gamma_psi_per_in": 0.0361
     },
-    "mdf_extira": {
+    "vessel": {
       "E_psi": 650000
     },
     "aluminum_2525": {
