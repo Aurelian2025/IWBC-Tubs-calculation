@@ -157,7 +157,7 @@ const Tub3D: React.FC<Tub3DProps> = ({
     grid.position.y = 0;
     tubGroup.add(grid);
 
-    // --- Visual supports: bottom extrusions & wall posts ---
+    // --- Visual supports: bottom frame & wall posts ---
     function addSupports() {
       const supportMat = new THREE.MeshPhongMaterial({
         color: 0x777777,
@@ -169,7 +169,7 @@ const Tub3D: React.FC<Tub3DProps> = ({
       const postHeight = Hw;
       const postSize = Math.min(Lw, Ww) * 0.03;
 
-      // 1) Bottom transverse extrusions (beams across width)
+      // 1) Bottom transverse frame (beams across width)
       const nBottomRaw = tub.n_transverse ?? 0;
       const nBottom = Math.max(0, nBottomRaw);
 
