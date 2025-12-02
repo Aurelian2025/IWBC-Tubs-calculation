@@ -8,7 +8,7 @@
 
 export type MaterialsConfig = {
   water: { gamma_psi_per_in: number };
-  vessel_extira: { E_psi: number };
+  vessel: { E_psi: number };
   aluminum_2525: { E_psi: number; I_in4: number; c_in: number };
 };
 
@@ -160,7 +160,7 @@ export function vesselBottomDeflection(
 
   // vessel plate properties
   const t = tub.t_vessel_bottom_in;                        // thickness (in)
-  const E = materials.vessel_extira.E_psi;                 // psi
+  const E = materials.vessel.E_psi;                 // psi
   const D = plateFlexuralRigidity(E, t);                // lb·in
 
   // --- 1) BENDING deflection of the plate alone ---
@@ -276,7 +276,7 @@ export function bottomDeflectionProfile(
   const a = Math.min(panelLen, tub.W_tub_in); // effective short side (in)
 
   const t = tub.t_vessel_bottom_in;
-  const E = materials.vessel_extira.E_psi;
+  const E = materials.vessel.E_psi;
   const D = plateFlexuralRigidity(E, t);
 
   // Plate-only deflection at center
@@ -352,7 +352,7 @@ export function shortSideDeflectionProfile(
   const b_panel = b_full / (nShort + 1); // panel width between posts
 
   const t = tub.t_vessel_side_in;
-  const E = materials.vessel_extira.E_psi;
+  const E = materials.vessel.E_psi;
   const D = plateFlexuralRigidity(E, t);
 
   // base plate deflection using full height
@@ -419,7 +419,7 @@ export function longSideDeflectionProfile(
   const b_panel = b_full / (nLong + 1); // panel length between posts
 
   const t = tub.t_vessel_side_in;
-  const E = materials.vessel_extira.E_psi;
+  const E = materials.vessel.E_psi;
   const D = plateFlexuralRigidity(E, t);
 
   // base plate deflection using full height
