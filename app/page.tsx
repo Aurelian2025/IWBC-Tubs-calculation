@@ -184,7 +184,7 @@ export default function Page() {
               onChange={(v) => setTub({ ...tub, water_freeboard_in: v })}
             />
             <LabelInput
-              label="# Bottom Transverse Extrusions"
+              label="# Bottom Transverse "
               value={tub.n_transverse}
               onChange={(v) => setTub({ ...tub, n_transverse: v })}
             />
@@ -290,7 +290,7 @@ export default function Page() {
               padding: "0.5rem 0.75rem"
             }}
           >
-            <strong>Frame Extrusions</strong>
+            <strong>Frame </strong>
             <div>
               Max δ (mm): {(extr.delta_max * INCH_TO_MM).toFixed(3)}
             </div>
