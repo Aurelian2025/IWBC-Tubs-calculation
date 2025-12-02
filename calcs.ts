@@ -8,7 +8,7 @@
 
 export type MaterialsConfig = {
   water: { gamma_psi_per_in: number };
-  mdf_extira: { E_psi: number };
+  vessel_extira: { E_psi: number };
   aluminum_2525: { E_psi: number; I_in4: number; c_in: number };
 };
 
@@ -17,8 +17,8 @@ export type TubGeometry = {
   W_tub_in: number;
   H_tub_in: number;
 
-  t_mdf_bottom_in: number;
-  t_mdf_side_in: number;
+  t_vessel_bottom_in: number;
+  t_vessel_side_in: number;
 
   // water depth (in)
   water_freeboard_in: number;
@@ -45,8 +45,8 @@ export type FrameGeometry = {
 // Plate helpers
 // -------------------------
 
-// approximate Poisson's ratio for MDF
-const POISSON_MDF = 0.30;
+// approximate Poisson's ratio for vessel
+const POISSON_vessel = 0.30;
 // approximate coefficient for max deflection of simply supported plate, uniform load
 const PLATE_DEFLECTION_COEFF = 0.004; // dimensionless
 
@@ -54,7 +54,7 @@ const PLATE_DEFLECTION_COEFF = 0.004; // dimensionless
 function plateFlexuralRigidity(
   E_psi: number,
   t_in: number,
-  nu: number = POISSON_MDF
+  nu: number = POISSON_vessel
   
 ) {
   return (E_psi * Math.pow(t_in, 3)) / (12 * (1 - nu * nu));
@@ -136,10 +136,10 @@ const h_water = Math.min(tub.water_freeboard_in, tub.H_tub_in); // inches
 }
 
 // -------------------------
-// MDF Bottom Deflection (plate on foam foundation, with bottom extrusions)
+// vessel Bottom Deflection (plate on foam foundation, with bottom extrusions)
 // -------------------------
 
-export function mdfBottomDeflection(
+export function vesselBottomDeflection(
   tub: TubGeometry,
   materials: MaterialsConfig
 ) {
@@ -158,9 +158,9 @@ export function mdfBottomDeflection(
   const a = Math.min(panelLen, tub.W_tub_in);           // in
   const b = Math.max(panelLen, tub.W_tub_in);           // in
 
-  // MDF plate properties
-  const t = tub.t_mdf_bottom_in;                        // thickness (in)
-  const E = materials.mdf_extira.E_psi;                 // psi
+  // vessel plate properties
+  const t = tub.t_vessel_bottom_in;                        // thickness (in)
+  const E = materials.vessel_extira.E_psi;                 // psi
   const D = plateFlexuralRigidity(E, t);                // lb·in
 
   // --- 1) BENDING deflection of the plate alone ---
@@ -270,13 +270,13 @@ export function bottomDeflectionProfile(
 
   const q_bottom = gamma * h_water; // psi
 
-  // Same panel logic as mdfBottomDeflection
+  // Same panel logic as vesselBottomDeflection
   const nPanels = Math.max(2, tub.n_transverse);
   const panelLen = tub.L_tub_in / (nPanels - 1);
   const a = Math.min(panelLen, tub.W_tub_in); // effective short side (in)
 
-  const t = tub.t_mdf_bottom_in;
-  const E = materials.mdf_extira.E_psi;
+  const t = tub.t_vessel_bottom_in;
+  const E = materials.vessel_extira.E_psi;
   const D = plateFlexuralRigidity(E, t);
 
   // Plate-only deflection at center
@@ -351,8 +351,8 @@ export function shortSideDeflectionProfile(
 
   const b_panel = b_full / (nShort + 1); // panel width between posts
 
-  const t = tub.t_mdf_side_in;
-  const E = materials.mdf_extira.E_psi;
+  const t = tub.t_vessel_side_in;
+  const E = materials.vessel_extira.E_psi;
   const D = plateFlexuralRigidity(E, t);
 
   // base plate deflection using full height
@@ -418,8 +418,8 @@ export function longSideDeflectionProfile(
 
   const b_panel = b_full / (nLong + 1); // panel length between posts
 
-  const t = tub.t_mdf_side_in;
-  const E = materials.mdf_extira.E_psi;
+  const t = tub.t_vessel_side_in;
+  const E = materials.vessel_extira.E_psi;
   const D = plateFlexuralRigidity(E, t);
 
   // base plate deflection using full height
