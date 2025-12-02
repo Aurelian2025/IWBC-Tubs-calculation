@@ -3,8 +3,8 @@
     "L_tub_in": 59,
     "W_tub_in": 24,
     "H_tub_in": 24,
-    "t_mdf_bottom_in": 0.5,
-    "t_mdf_side_in": 0.5,
+    "t_vessel_bottom_in": 0.5,
+    "t_vessel_side_in": 0.5,
     "water_freeboard_in": 17.5,
 
     "n_transverse": 4,
